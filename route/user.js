@@ -8,6 +8,7 @@ const leadController = require("../controller/User/LeadAPIController")
 const userSurveryReportController = require("../controller/User/UserSurveyReportController")
 const dashboardController = require("../controller/User/DashboardAPIController")
 const followUpController = require("../controller/User/FollowUpAPIController")
+const proposalController = require("../controller/User/ProposalAPIController")
 
 router.get('/program/data', isAuth, programController.getCourseAPIController);
 
@@ -31,5 +32,9 @@ router.post("/follow-up/post/:leadId", isAuth, followUpController.postFollowUpCo
 
 //This is the API of dashboard
 router.get("/dashboard/user/data", isAuth, dashboardController.getDashboardAPI)
+
+//This route is for proposal data
+router.get("/proposal/create/data", isAuth, proposalController.getCreateProposalAPIController)
+router.post("/proposal/post/data", isAuth, proposalController?.postProposalAPIController)
 
 module.exports = router;
