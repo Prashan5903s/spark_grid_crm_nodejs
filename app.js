@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const flash = require('connect-flash');
 const authRoute = require('./route/auth');
 const adminRoute = require('./route/admin');
-const AppConfig = require("./model/AppConfig")
+const Notification = require("./model/Notifications")
 const companyRouter = require('./route/company');
 const userRouter = require('./route/user');
 const scheduleNotificationCommand = require("./command/ScheduleNotification")
@@ -15,6 +15,7 @@ const scheduleNotificationCommand = require("./command/ScheduleNotification")
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
+const AppConfig = require('./model/AppConfig');
 
 require('dotenv').config();
 

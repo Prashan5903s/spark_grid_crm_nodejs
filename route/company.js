@@ -24,6 +24,7 @@ const moduleSettingController = require("../controller/Company/ModuleSettingCont
 const mailTemplateController = require("../controller/Company/MailTemplateController")
 const exportCenterController = require("../controller/Company/ExportCenterAPIController")
 const scheduleNotificationController = require('../controller/Company/ScheduleNotificationController');
+const dashboardController = require("../controller/Company/DashboardAPIController")
 
 const createUpload = require('../util/upload');
 
@@ -159,5 +160,7 @@ router.post("/schedule/notification/data", isAuth, scheduleNotificationControlle
 router.get('/schedule/notification/edit/data/:id', isAuth, scheduleNotificationController.getEditSchedNotification)
 router.get("/schedule/notification/create/data", isAuth, scheduleNotificationController.getCreateScheduleNotification)
 router.delete("/schedule/notification/delete/:id", isAuth, scheduleNotificationController.deleteScheduleNotificationController)
+
+router.get("/dashboard/company/data", isAuth, dashboardController.getDashboardAPIController)
 
 module.exports = router;

@@ -1,29 +1,29 @@
 <?php
 
 require_once 'mail_config.php';
-require_once 'dompdf/autoload.inc.php';
+require_once 'dompdf/autoload.inc.php'; 
+
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
 // Helper function to format numbers in Indian Currency Format
-function formatIndianCurrency($num)
-{
+function formatIndianCurrency($num) {
     $num = round($num);
     $explrestunits = "";
-    if (strlen((string) $num) > 3) {
-        $lastthree = substr((string) $num, strlen((string) $num) - 3, strlen((string) $num));
-        $restunits = substr((string) $num, 0, strlen((string) $num) - 3);
-        $restunits = (strlen($restunits) % 2 == 1) ? "0" . $restunits : $restunits;
+    if(strlen((string)$num) > 3) {
+        $lastthree = substr((string)$num, strlen((string)$num)-3, strlen((string)$num));
+        $restunits = substr((string)$num, 0, strlen((string)$num)-3);
+        $restunits = (strlen($restunits)%2 == 1) ? "0".$restunits : $restunits;
         $expunit = str_split($restunits, 2);
-        for ($i = 0; $i < sizeof($expunit); $i++) {
-            if ($i == 0) {
-                $explrestunits .= (int) $expunit[$i] . ",";
+        for($i=0; $i<sizeof($expunit); $i++) {
+            if($i==0) {
+                $explrestunits .= (int)$expunit[$i].",";
             } else {
-                $explrestunits .= $expunit[$i] . ",";
+                $explrestunits .= $expunit[$i].",";
             }
         }
-        $thecash = $explrestunits . $lastthree;
+        $thecash = $explrestunits.$lastthree;
     } else {
         $thecash = $num;
     }
@@ -31,60 +31,65 @@ function formatIndianCurrency($num)
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-
-    // --- 1. ACCEPTED DATA (Sanitized) ---
+    
+   // --- 1. ACCEPTED DATA (Sanitized) ---
     $proposal_for = htmlspecialchars($_POST['proposal_for'] ?? 'Valued Customer');
     $address = htmlspecialchars($_POST['address'] ?? '');
-
+    
     $totalload_kw = floatval(str_replace(',', '', trim($_POST['totalload'] ?? '1000')));
     $monthly_consumption = floatval(str_replace(',', '', trim($_POST['monthly_consumption'] ?? '0')));
-
+    
     // Automatically calculate annual consumption from the monthly input
     $annual_consumption = $monthly_consumption * 12;
 
     $base_unit_cost = floatval(str_replace(',', '', trim($_POST['unitcost'] ?? '6.96')));
     $i_type = $_POST['i_type'] ?? 'Other';
+    $base_unit_cost_rate = floatval(str_replace(',', '', trim($_POST['baseunitrate'] ?? '6.96')));
 
+  
+    
     // --- 2. CALCULATED VALUES ---
-    $today_date = date("d F Y");
-
+    $today_date = date("d F Y"); 
+    
     $gridRate = $base_unit_cost + round(($base_unit_cost * 22 / 100), 2);
-
+    
     $solarCapacity1 = ($totalload_kw * 1.4) / 1000;
-
+    
     $solarCapacity2 = 0;
     if ($monthly_consumption > 0) {
         $solarCapacity2 = $monthly_consumption / 120000;
     }
-
+    
     if ($solarCapacity1 > 0 && $solarCapacity2 > 0) {
         $solarCapacityMw = min($solarCapacity1, $solarCapacity2);
     } else {
         $solarCapacityMw = max($solarCapacity1, $solarCapacity2);
     }
-    if ($solarCapacityMw <= 0) {
-        $solarCapacityMw = 1.0;
-    }
-
+    if ($solarCapacityMw <= 0) { $solarCapacityMw = 1.0; }
+    
     $first_year_generation = 1440000 * $solarCapacityMw;
     $monthly_solar_generation = $first_year_generation / 12;
+    
+    $sparkGridFixed = ($i_type === 'Manufacturing') ? 5.0 : 5.75;
 
-    $sparkGridFixed = ($i_type === 'Manufacturing') ? 4.75 : 5.75;
+     if($i_type == 'Baserate');
+     $sparkGridFixed = $base_unit_cost_rate;
+
     $omChargeInitial = 0.30;
     $sparkGridSolarCost = $sparkGridFixed + $omChargeInitial;
-
+    
     $immediate_savings = $gridRate - $sparkGridSolarCost;
-
+    
     $total_investment_crore = 3.5 * $solarCapacityMw;
     $captive_investment_lakh = 30 * $solarCapacityMw;
     $captive_investment_crore = $captive_investment_lakh / 100;
 
     // --- 3. BUILD 25-YEAR SAVINGS TABLE ROWS ---
-    $lossFactor = 0.08;
+    $lossFactor = 0.08;         
     $annual_degradation = 0.008;
-    $discom_escalation = 0.03;
-    $omIncrement = 0.05;
-
+    $discom_escalation = 0.03;  
+    $omIncrement = 0.05; 
+    
     $current_generation = $first_year_generation;
     $current_discom = $gridRate;
     $current_om = $omChargeInitial;
@@ -92,17 +97,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $table_rows = "";
 
     $display_years = [1, 5, 10, 15, 20, 25];
-    $row_count = 0;
+    $row_count = 0; 
 
     for ($year = 1; $year <= 25; $year++) {
         $net_received = $current_generation * (1 - $lossFactor);
         $discom_cost = $net_received * $current_discom;
         $spark_total_rate = $sparkGridFixed + $current_om;
-        $solar_cost = $current_generation * $spark_total_rate;
-
+        $solar_cost = $current_generation * $spark_total_rate; 
+        
         $net_savings = $discom_cost - $solar_cost;
-        $monthly_savings = $net_savings / 12;
-
+        $monthly_savings = $net_savings / 12; 
+        
         $cumulative_savings += $net_savings;
 
         if (in_array($year, $display_years)) {
@@ -110,12 +115,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $table_rows .= "
             <tr style='background-color: {$bg_color};'>
                 <td><strong>{$year}</strong></td>
-                <td>" . formatIndianCurrency($current_generation) . "</td>
-                <td>" . formatIndianCurrency($net_received) . "</td>
-                <td>₹ " . formatIndianCurrency($discom_cost) . "</td>
-                <td>₹ " . formatIndianCurrency($solar_cost) . "</td>
-                <td class='text-green'><strong>₹ " . formatIndianCurrency($net_savings) . "</strong></td>
-                <td class='text-green'><strong>₹ " . formatIndianCurrency($monthly_savings) . "</strong></td>
+                <td>".formatIndianCurrency($current_generation)."</td>
+                <td>".formatIndianCurrency($net_received)."</td>
+                <td>₹ ".formatIndianCurrency($discom_cost)."</td>
+                <td>₹ ".formatIndianCurrency($solar_cost)."</td>
+                <td class='text-green'><strong>₹ ".formatIndianCurrency($net_savings)."</strong></td>
+                <td class='text-green'><strong>₹ ".formatIndianCurrency($monthly_savings)."</strong></td>
             </tr>";
             $row_count++;
         }
@@ -232,11 +237,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <table class='cover-table'>
                 <tr>
                     <td>Sanctioned Load</td>
-                    <td>" . number_format($totalload_kw / 1000, 2) . " MW</td>
+                    <td>".number_format($totalload_kw/1000, 2)." MW</td>
                 </tr>
                 <tr>
                     <td>Proposed Capacity</td>
-                    <td>" . number_format($solarCapacityMw, 2) . " MW</td>
+                    <td>".number_format($solarCapacityMw, 2)." MW</td>
                 </tr>
             </table>
 
@@ -288,35 +293,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </tr>
                 <tr>
                     <td style='text-align: left; padding: 8px;'>Sanctioned Load</td>
-                    <td style='padding: 8px;'>" . number_format($totalload_kw / 1000, 2) . " MW</td>
+                    <td style='padding: 8px;'>".number_format($totalload_kw/1000, 2)." MW</td>
                 </tr>
                 <tr>
                     <td style='text-align: left; padding: 8px;'>Annual Consumption</td>
-                    <td style='padding: 8px;'>" . formatIndianCurrency($annual_consumption) . " Units</td>
+                    <td style='padding: 8px;'>".formatIndianCurrency($annual_consumption)." Units</td>
                 </tr>
                 <tr>
                     <td style='text-align: left; padding: 8px;'>Average Monthly Consumption</td>
-                    <td style='padding: 8px;'>" . formatIndianCurrency($monthly_consumption) . " Units</td>
+                    <td style='padding: 8px;'>".formatIndianCurrency($monthly_consumption)." Units</td>
                 </tr>
                 <tr class='highlight-row'>
                     <td style='text-align: left; color: #2e7d32; padding: 8px;'>Proposed Solar Capacity</td>
-                    <td style='color: #2e7d32; padding: 8px;'>" . number_format($solarCapacityMw, 2) . " MW</td>
+                    <td style='color: #2e7d32; padding: 8px;'>".number_format($solarCapacityMw, 2)." MW</td>
                 </tr>
                 <tr>
                     <td style='text-align: left; padding: 8px;'>Estimated Monthly Solar Generation</td>
-                    <td style='padding: 8px;'>" . formatIndianCurrency($monthly_solar_generation) . " Units</td>
+                    <td style='padding: 8px;'>".formatIndianCurrency($monthly_solar_generation)." Units</td>
                 </tr>
                 <tr>
                     <td style='text-align: left; padding: 8px;'>Current DISCOM Cost</td>
-                    <td style='padding: 8px;'>₹ " . number_format($gridRate, 2) . " / unit</td>
+                    <td style='padding: 8px;'>₹ ".number_format($gridRate, 2)." / unit</td>
                 </tr>
                 <tr>
                     <td style='text-align: left; padding: 8px;'>Spark Grid Solar Cost</td>
-                    <td style='padding: 8px;'>₹ " . number_format($sparkGridSolarCost, 2) . " / unit</td>
+                    <td style='padding: 8px;'>₹ ".number_format($sparkGridSolarCost, 2)." / unit</td>
                 </tr>
                 <tr class='highlight-row'>
                     <td style='text-align: left; color: #2e7d32; padding: 8px;'>Immediate Savings</td>
-                    <td style='color: #2e7d32; padding: 8px;'>₹ " . number_format($immediate_savings, 2) . " / unit</td>
+                    <td style='color: #2e7d32; padding: 8px;'>₹ ".number_format($immediate_savings, 2)." / unit</td>
                 </tr>
             </table>
         </div>
@@ -325,10 +330,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <h3>4. Project Investment Structure</h3>
             <ul style='background-color: #f9f9f9; padding: 15px 15px 15px 35px; border-left: 4px solid #4CAF50;'>
                 <li>Estimated project development cost for solar installation = <strong>₹ 3.5 crore per MW</strong>.</li>
-                <li>Proposed Solar Capacity = <strong>" . number_format($solarCapacityMw, 2) . " MW</strong> plant.</li>
-                <li>Total project investment = 3.5 * " . number_format($solarCapacityMw, 2) . " = <strong>₹ " . number_format($total_investment_crore, 2) . " crore</strong>.</li>
+                <li>Proposed Solar Capacity = <strong>".number_format($solarCapacityMw, 2)." MW</strong> plant.</li>
+                <li>Total project investment = 3.5 * ".number_format($solarCapacityMw, 2)." = <strong>₹ ".number_format($total_investment_crore, 2)." crore</strong>.</li>
                 <li>Captive User Investment = <strong>₹ 30 lakh per MW</strong> as equity participation.</li>
-                <li>For Proposed Capacity of " . number_format($solarCapacityMw, 2) . " MW, {$proposal_for}, total Investment = <strong>₹ " . number_format($captive_investment_crore, 2) . " crore</strong>.</li>
+                <li>For Proposed Capacity of ".number_format($solarCapacityMw, 2)." MW, {$proposal_for}, total Investment = <strong>₹ ".number_format($captive_investment_crore, 2)." crore</strong>.</li>
             </ul>
             <p style='font-size: 12px;'><em>*Dividend: After debt clearance, the captive user investment carries dividend, approximately ₹ 8-10 lakh per MW annually.</em></p>
         </div>
@@ -351,7 +356,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 {$table_rows}
                 <tr>
                     <td colspan='5' style='text-align: right; font-weight: bold; font-size: 12px; padding: 10px;'>Cumulative Savings</td>
-                    <td colspan='2' class='highlight-row' style='font-size: 13px; color: #2e7d32; text-align: center; padding: 10px;'>₹ " . formatIndianCurrency($cumulative_savings) . "</td>
+                    <td colspan='2' class='highlight-row' style='font-size: 13px; color: #2e7d32; text-align: center; padding: 10px;'>₹ ".formatIndianCurrency($cumulative_savings)."</td>
                 </tr>
             </table>
             <p style='font-size: 11px; color: #555; line-height: 1.3;'><em>*Note: The projected savings & dividend presented above are illustrative estimates based on current electricity tariffs, regulatory framework, and operational assumptions. Actual savings may vary depending on changes in government policies, regulatory provisions, tariff revisions, applicable charges, and force majeure events.</em></p>
@@ -441,19 +446,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // --- 5. INITIALIZE DOMPDF AND OUTPUT ---
     $options = new Options();
     $options->set('isHtml5ParserEnabled', true);
-    $options->set('isRemoteEnabled', true);
-
+    $options->set('isRemoteEnabled', true); 
+    
     $dompdf = new Dompdf($options);
     $dompdf->loadHtml($html);
     $dompdf->setPaper('A4', 'portrait');
     $dompdf->render();
-
+    
     $pdfOutput = $dompdf->output();
     $filename = "Spark_Grid_Proposal_" . preg_replace('/[^A-Za-z0-9_\-]/', '_', $proposal_for) . ".pdf";
 
     // --- 6. EMAIL INTEGRATION WITH PHPMAILER ---
     $client_email = $_POST['client_email'] ?? '';
-
+    
     if (!empty($client_email) && filter_var($client_email, FILTER_VALIDATE_EMAIL)) {
         require_once 'PHPMailer/Exception.php';
         require_once 'PHPMailer/PHPMailer.php';
@@ -462,25 +467,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
 
         try {
-            $mail->SMTPDebug = 0;
-            $mail->isSMTP();
-            $mail->Host = SMTP_HOST;
-            $mail->SMTPAuth = false;
-            $mail->Username = SMTP_USER;
-            $mail->Password = SMTP_PASS;
-            $mail->SMTPSecure = false;       // \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port = SMTP_PORT;
+			$mail->SMTPDebug = 0;
+			$mail->isSMTP();                                            
+			$mail->Host       = SMTP_HOST; 
+			$mail->SMTPAuth   = false;                                   
+			$mail->Username   = SMTP_USER; 
+			$mail->Password   = SMTP_PASS;  
+			$mail->SMTPSecure = false;       // \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+			$mail->Port       = SMTP_PORT;
 
             $mail->setFrom('info@sparkgrid.co.in', 'Spark Grid Proposals');
-            $mail->addAddress($client_email, $proposal_for);
-            $mail->addBCC('info@sparkgrid.co.in');
+            $mail->addAddress($client_email, $proposal_for);     
+            $mail->addBCC('info@sparkgrid.co.in');               
 
             $mail->addStringAttachment($pdfOutput, $filename, 'base64', 'application/pdf');
 
-            $mail->isHTML(true);
+            $mail->isHTML(true);                                  
             $mail->Subject = 'Your Captive Solar Power Proposal - Spark Grid';
-
-            $mail->Body = "
+            
+            $mail->Body    = "
                 <h3>Dear M/s {$proposal_for},</h3>
                 <p>Thank you for considering Spark Grid for your renewable energy requirements.</p>
 				<p>Please find attached your customized 25-year captive solar power projection. Based on your current energy consumption and tariff structure, the analysis indicates potential savings of up to <strong>₹ {$formatted_savings_crores} crore</strong> over the project lifecycle, based on an estimated solar plant capacity of <strong>{$solarCapacityMw} MW</strong>.</p>
@@ -501,7 +506,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             error_log("Proposal Email could not be sent. Mailer Error: {$mail->ErrorInfo}");
         }
     }
-
+    
     // --- 7. FORCE DOWNLOAD IN BROWSER ---
     $dompdf->stream($filename, ["Attachment" => true]);
     exit();

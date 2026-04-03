@@ -13,6 +13,11 @@ const appConfigSchema = new mongoose.Schema({
             required: true,
             maxlength: 255
         },
+        color: {
+            type: String,
+            required: true,
+            maxLength: 10
+        }
     }],
     leads_source_data: [{
         title: {

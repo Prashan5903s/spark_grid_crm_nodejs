@@ -2,7 +2,6 @@ const Module = require("../../model/Module");
 const mongoose = require("mongoose");
 const User = require("../../model/User");
 const AppConfig = require("../../model/AppConfig")
-const Activity = require("../../model/Activity");
 const ActivityLog = require("../../model/ActivityFolderReport");
 const { successResponse } = require("../../util/response");
 
@@ -28,9 +27,7 @@ exports.getDashboardAPIController = async (req, res, next) => {
 
         const moduleIds = modules.map(m => (m._id));
 
-        const activities = await Activity.find({
-            module_id: { $in: moduleIds }
-        }).lean();
+        const activities = [];
 
         const logs = await ActivityLog.find({
             is_completed: true,

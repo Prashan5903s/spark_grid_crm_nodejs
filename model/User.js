@@ -131,6 +131,10 @@ const userSchema = new Schema({
     is_verified: {
         type: Boolean
     },
+    reporting_manager_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false,
+    },
     created_at: {
         type: Date,
         default: Date.now

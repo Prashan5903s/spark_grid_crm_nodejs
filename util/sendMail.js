@@ -3,14 +3,14 @@ const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
     host: process.env.MAIL_HOST,
     port: Number(process.env.MAIL_PORT),
-    secure: Number(process.env.MAIL_PORT) === 465, 
+    secure: Number(process.env.MAIL_PORT) === 465,
     auth: {
         user: process.env.MAIL_USERNAME,
         pass: process.env.MAIL_PASSWORD,
     },
 });
 
-async function sendMail({ to, subject, html, text }) {
+async function sendMail({ to, subject, html, text, attachments = [] }) {
     try {
         const info = await transporter.sendMail({
             from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
@@ -18,6 +18,7 @@ async function sendMail({ to, subject, html, text }) {
             subject,
             text: text || "",
             html,
+            attachments
         });
 
         return info;

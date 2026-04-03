@@ -1,210 +1,109 @@
-const mongoose = require("mongoose");
 const Handlebars = require("handlebars");
-
-const User = require("../model/User");
-const AppConfig = require("../model/AppConfig");
-const Notification = require("../model/Notifications");
-const ScheduleNotification = require("../model/ScheduleNotification")
-
+const NotificationLog = require("../model/NotificationLog");
 const sendMail = require("./sendMail");
-const { decrypt } = require("./encryption");
 
-const supportLink = process.env.SUPPORT_LINK || "";
-const supportEmail = process.env.SUPPORT_EMAIL || "";
-const appName = process.env.APP_NAME || "";
+const html_to_pdf = require("html-pdf-node");
 
-const sendMailFunction = async ({ scheduleNotification, userId, isCompany, to, subject, html }) => {
+const sendMailFunction = async ({
+    to,
+    subject,
+    html,
+    pdfHtml,
+    isAttachment = false,
+    templateName,
+    templateId,
+    userId
+}) => {
 
-    const schedUserId = scheduleNotification?.schedule_user_id;
+    let attachments = [];
 
-    const hasUser = schedUserId.includes(userId)
+    if (isAttachment && pdfHtml) {
+        const file = { content: pdfHtml };
+        const options = { format: "A4" };
 
-    const repeatType = scheduleNotification.repeat_type;
+        const pdfBuffer = await html_to_pdf.generatePdf(file, options);
 
-    if ((hasUser || isCompany) && repeatType === "1") {
-
-        await sendMail({ to, subject, html });
-
+        attachments.push({
+            filename: "Proposal.pdf",
+            content: pdfBuffer,
+            contentType: "application/pdf"
+        });
     }
-}
 
+    await sendMail({ to, subject, html, attachments });
+
+    const notificationLog = new NotificationLog({
+        user_id: userId,
+        template_id: templateId,
+        template_name: templateName,
+        schedule_date: new Date(),
+        created_at: new Date()
+    });
+
+    await notificationLog.save();
+};
+
+// Main function
 module.exports = async ({
     userId,
-    notificationId,
     to,
-    event,
-    means,
-    explanation,
-    userPassword = "",
-    moduleId = "",
-    isCompany = true
+    emailMessage,
+    emailSubject,
+    pdfMessage,
+    pdfSubject,
+    finalData,
+    templateId,
+    templateName
 }) => {
     try {
 
-        const [notification, userData, appConfig] = await Promise.all([
-            Notification.findById(notificationId).lean(),
-            User.aggregate([
-                { $match: { _id: mongoose.Types.ObjectId.createFromHexString(userId) } },
-                {
-                    $addFields: {
-                        country_id_num: { $toInt: "$country_id" },
-                        state_id_num: { $toInt: "$state_id" },
-                        city_id_num: { $toInt: "$city_id" },
-                    },
-                },
-                {
-                    $addFields: {
-                        latestCode: {
-                            $arrayElemAt: [
-                                { $sortArray: { input: "$codes", sortBy: { issued_on: -1 } } },
-                                0,
-                            ],
-                        },
-                    },
-                },
-                {
-                    $lookup: {
-                        from: "countries",
-                        localField: "country_id_num",
-                        foreignField: "country_id",
-                        as: "country",
-                    },
-                },
-                { $unwind: { path: "$country", preserveNullAndEmptyArrays: true } },
-                {
-                    $addFields: {
-                        state: {
-                            $arrayElemAt: [
-                                {
-                                    $filter: {
-                                        input: "$country.states",
-                                        as: "state",
-                                        cond: { $eq: ["$$state.state_id", "$state_id_num"] },
-                                    },
-                                },
-                                0,
-                            ],
-                        },
-                    },
-                },
-                {
-                    $addFields: {
-                        city: {
-                            $arrayElemAt: [
-                                {
-                                    $filter: {
-                                        input: "$state.cities",
-                                        as: "city",
-                                        cond: { $eq: ["$$city.city_id", "$city_id_num"] },
-                                    },
-                                },
-                                0,
-                            ],
-                        },
-                    },
-                },
-                {
-                    $project: {
-                        first_name: 1,
-                        last_name: 1,
-                        email: 1,
-                        phone: 1,
-                        empCode: "$latestCode.code",
-                        countryName: "$country.country_name",
-                        stateName: "$state.state_name",
-                        cityName: "$city.city_name",
-                    },
-                },
-            ]),
-            AppConfig.findOne({ default_email_layout: { $exists: true, $ne: null } }).lean(),
-        ]);
-
-        if (!notification || !userData?.length || !appConfig) {
-            throw new Error("Required data not found");
-        }
-
-        const user = userData[0];
-
-        const userSpecificInput = notification.user_input?.find(
-            (item) => item?.created_by?.toString() === userId
-        );
-
-        const isSelected = userSpecificInput?.default_select ?? notification.default_select ?? false;
-
-        const headerLogoUrl = `${supportLink}/${userSpecificInput?.header_logo ?? notification.header_logo ?? "company_logo/demo39.svg"}`;
-        const footerLogoUrl = `${supportLink}/${userSpecificInput?.footer_logo ?? notification.footer_logo ?? "company_logo/demo39.svg"}`;
-
-        const showFooterImage = userSpecificInput?.show_footer_logo ?? notification?.show_footer_logo ?? false;
-        const headerAlign = userSpecificInput?.header_logo_align ?? notification?.header_logo_align ?? "center";
-        const footerAlign = userSpecificInput?.footer_logo_align ?? notification?.footer_logo_align ?? "center";
-
-        if (!isSelected) return;
-
+        // IMPORTANT: No {{ }} here
         const replacements = {
-            "user_first-name": user.first_name || "",
-            "user_last-name": user.last_name || "",
-            "user_phone": decrypt(user.phone || ""),
-            'user_email': decrypt(user.email || ""),
-            'user_country': user.countryName || "",
-            'user_state': user.stateName || "",
-            'user_city': user.cityName || "",
-            "user_employee-id": user.empCode || "",
-            "user_password": userPassword || "",
-            'app_event': event || "",
-            'app_means': means || "",
-            'app_explanation': explanation || "",
-            'app_supportemail': supportEmail,
-            'app_supportlink': supportLink,
-            'app_name': appName,
+            proposal_for: finalData?.finalProposalFor || "",
+            address: finalData?.finalAddress || "",
+            totalload: finalData?.finalTotalLoad || "",
+            solarCapacity: finalData?.finalSolarCapacity || "",
+            totalload_kw: finalData?.finalTotalLoad || "",
+            annual_consumption: finalData?.finalAnnualConsumption || "",
+            monthly_consumption: finalData?.finalMonthlyConsumption || "",
+            solarCapacityMw: finalData?.finalSolarCapacity || "",
+            monthly_solar_generation: finalData?.finalMonthlySolarGeneration || "",
+            gridRate: finalData?.finalGridRate || "",
+            sparkGridSolarCost: finalData?.finalSparkGridSolarCost || "",
+            immediate_savings: finalData?.finalImmediateSaving || "",
+            total_investment_crore: finalData?.finalTotalInvestmentCrore || "",
+            captive_investment_crore: finalData?.finalCaptiveInvestmentCrore || "",
+            table_rows: finalData?.table_rows || "",
+            cumulative_savings: finalData?.finalCumulativeSavings || "",
+            formatted_savings_crores: finalData?.finalFomativeSaving || "",
+            sparkGridFixed: finalData?.sparkGridFixed || "",
+            omChargeInitial: finalData?.omChargeInitial || "",
+            today_date: finalData?.finalTodayDate || "",
+            logoUrl: finalData?.logoUrl || "",
+            coverImageUrl: finalData?.coverImageUrl || "",
         };
 
-        const compiledSubject = Handlebars.compile(userSpecificInput?.subject || notification.subject || "Notification");
-        const compiledMessage = Handlebars.compile(userSpecificInput?.message || notification.message || "");
-        const compiledFooter = Handlebars.compile(userSpecificInput?.footer || notification.footer || "");
+        // Compile subject & message ONCE
+        const compiledEmailSubject = Handlebars.compile(emailSubject || "Notification");
+        const compiledEmailMessage = Handlebars.compile(emailMessage || "");
 
-        const subject = compiledSubject(replacements);
-        const message = compiledMessage(replacements);
-        const footer = compiledFooter(replacements);
+        const compiledPDFMessage = Handlebars.compile(pdfMessage);
 
-        const bodyContent = `
-          <div style="margin-bottom:16px;">${message}</div>
-          <div style="margin-top:16px;">${footer}</div>
-        `
+        const finalEmailSubject = compiledEmailSubject(replacements);
+        const emailHtml = compiledEmailMessage(replacements);
 
-        // Step 4: Compile email template
-        const compiledTemplate = Handlebars.compile(appConfig.default_email_layout);
+        const pdfHtml = compiledPDFMessage(replacements);
 
-        const html = compiledTemplate({
-            body: bodyContent,
-            headerLogoUrl,
-            headerAlign,
-            showFooterImage,
-            footerImageUrl: footerLogoUrl,
-            footerAlign,
+        await sendMailFunction({
+            to,
+            subject: finalEmailSubject,
+            html: emailHtml,
+            pdfHtml,
+            templateId,
+            templateName,
+            isAttachment: true,
+            userId
         });
-
-        const scheduleNotification = await ScheduleNotification.findOne({
-            template_id: notificationId,
-            created_by: userId
-        })
-
-
-        if (notificationId === "6878cd0351dcbae6759e8912" && scheduleNotification) {
-
-            console.log("Template", notificationId === "6878cd0351dcbae6759e8912");
-
-
-            await sendMailFunction({ scheduleNotification, userId, isCompany, to, subject, html })
-
-
-        } else if (scheduleNotification) [
-
-
-            await sendMailFunction({ scheduleNotification, userId, isCompany, to, subject, html })
-
-
-        ]
-
 
     } catch (err) {
         console.error("Notification Mail Error:", err);

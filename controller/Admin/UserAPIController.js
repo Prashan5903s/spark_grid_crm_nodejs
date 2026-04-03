@@ -33,7 +33,7 @@ exports.createUserAPI = async (req, res, next) => {
 
         const allowedFields = [
             'first_name', 'first_name_search', 'last_name', 'email', 'country_id', 'state_id',
-            'city_id', 'address', 'status', 'phone', 'dob', 'website',
+            'city_id', 'address', 'status', 'phone', 'dob', 'website', 'reporting_manager_id',
             'pincode', 'designation_id', 'urn_no', 'idfa_code',
             'application_no', 'licence_no', 'zone_id', 'employee_type', 'participation_type_id'
         ];
@@ -214,7 +214,7 @@ exports.updateUserAPI = async (req, res, next) => {
         const allowedFields = [
             'first_name', 'last_name', 'email', 'country_id', 'state_id',
             'city_id', 'address', 'status', 'phone', 'dob', 'website',
-            'pincode', 'designation_id', 'urn_no', 'idfa_code',
+            'pincode', 'designation_id', 'urn_no', 'idfa_code', 'reporting_manager_id',
             'application_no', 'licence_no', 'zone_id', 'employee_type', 'participation_type_id'
         ];
 

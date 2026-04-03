@@ -21,7 +21,7 @@ router.get("/self/enroll/data", isAuth, selfEnrollController.getSelfEnrollData)
 router.get("/self/enroll/data/:moduleId", isAuth, selfEnrollController.getInsertSelfEnrollData)
 
 //This is the route for leads
-router.get("/leads/data", isAuth, leadController.getLeadAPIController)
+router.get("/leads/data/:type", isAuth, leadController.getLeadAPIController)
 router.get("/leads/create/data", isAuth, leadController.getCreateLeadAPIController)
 router.post("/leads/data", isAuth, leadController.postLeadController)
 router.put("/leads/data/:id", isAuth, leadController.putLeadAPIController)
@@ -29,6 +29,8 @@ router.put("/leads/data/:id", isAuth, leadController.putLeadAPIController)
 //This is the route for follow up
 router.get("/follow-up/create/data", isAuth, followUpController.getCreateFollowUpController)
 router.post("/follow-up/post/:leadId", isAuth, followUpController.postFollowUpController)
+
+router.post("/follow-up/filter/data", isAuth, followUpController.postFilterFollowUpController)
 
 //This is the API of dashboard
 router.get("/dashboard/user/data", isAuth, dashboardController.getDashboardAPI)

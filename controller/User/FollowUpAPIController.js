@@ -1,6 +1,7 @@
+const mongoose = require("mongoose")
 const Lead = require("../../model/Leads")
-const AppConfig = require("../../model/AppConfig")
 const FollowUp = require("../../model/FollowUp");
+const AppConfig = require("../../model/AppConfig")
 const { successResponse, errorResponse } = require("../../util/response");
 
 exports.getFollowUpController = async (req, res, next) => {
@@ -103,3 +104,132 @@ exports.postFollowUpController = async (req, res, next) => {
         next(error)
     }
 }
+
+exports.postFilterFollowUpController = async (req, res, next) => {
+    try {
+        const userId = req?.userId;
+        const { type, status, startDate, endDate } = req.body || {};
+
+        let filter = {
+            created_by: mongoose.Types.ObjectId.createFromHexString(userId)
+        };
+
+        // Get today's and tomorrow's date ranges
+        const now = new Date();
+
+        if (type === "today") {
+            const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+            const endOfDay = new Date(now.setHours(23, 59, 59, 999));
+
+            filter.follow_up_date = {
+                $gte: startOfDay,
+                $lte: endOfDay
+            };
+        }
+
+        if (type === "tommorow") {
+
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            const startOfTomorrow = new Date(tomorrow.setHours(0, 0, 0, 0));
+            const endOfTomorrow = new Date(tomorrow.setHours(23, 59, 59, 999));
+
+            filter.follow_up_date = {
+                $gte: startOfTomorrow,
+                $lte: endOfTomorrow
+            };
+        }
+
+        if (status) {
+            filter.status = mongoose.Types.ObjectId.createFromHexString(status);
+        }
+
+        if (startDate && endDate) {
+
+            const startRangeDate = new Date(startDate);
+            const endRangeDate = new Date(endDate);
+
+            filter.follow_up_date = {
+                $gte: startRangeDate,
+                $lte: endRangeDate
+            }
+        }
+
+        const followUp = await FollowUp.aggregate([
+            {
+                $match: filter
+            },
+            {
+                $lookup: {
+                    from: "app_config",
+                    pipeline: [
+                        { $match: { type: "follow_up_data" } }
+                    ],
+                    as: "config"
+                }
+            },
+            {
+                $unwind: "$config"
+            },
+            {
+                $addFields: {
+                    status_data: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: "$config.follow_up_status_data",
+                                    as: "status",
+                                    cond: { $eq: ["$$status._id", "$status"] }
+                                }
+                            },
+                            0
+                        ]
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    follow_up_type_data: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: "$config.follow_up_type_data",
+                                    as: "type",
+                                    cond: { $eq: ["$$type._id", "$follow_up_type"] }
+                                }
+                            },
+                            0
+                        ]
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    priority_data: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: "$config.follow_up_priority_data",
+                                    as: "priority",
+                                    cond: { $eq: ["$$priority._id", "$priority"] }
+                                }
+                            },
+                            0
+                        ]
+                    }
+                }
+            },
+            {
+                $project: {
+                    config: 0
+                }
+            }
+        ]);
+
+        return successResponse(res, "Follow up fetched successfully", followUp);
+
+    } catch (error) {
+        next(error);
+    }
+};

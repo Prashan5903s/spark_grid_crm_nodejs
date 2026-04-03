@@ -283,7 +283,7 @@ exports.getPermAllowAPI = async (req, res, next) => {
         const label = '69c3baa8d5a6d6791176bf09';
         const role = '69c3ba0cd5a6d6791176be3b';
         const users = '69c3b09ddd3e08559fdb1b72';
-        const branch = '685394b1bf2b29d85a4773a3';
+        const branch = '69ca56c6f54dfd1eb1738836';
         const region = '69c3ba5ed5a6d6791176be9d';
         const zone = '69c3ba29d5a6d6791176be71';
         const group = '69c3ba1dd5a6d6791176be56';
