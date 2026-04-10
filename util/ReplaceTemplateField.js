@@ -34,12 +34,13 @@ const sendMailFunction = async ({
 
     const notificationLog = new NotificationLog({
         user_id: userId,
+        email_sent: to,
         template_id: templateId,
         template_name: templateName,
         schedule_date: new Date(),
         created_at: new Date()
     });
-
+        
     await notificationLog.save();
 };
 

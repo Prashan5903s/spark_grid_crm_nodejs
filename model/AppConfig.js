@@ -60,6 +60,13 @@ const appConfigSchema = new mongoose.Schema({
             required: true,
             maxLength: 255
         }
+    }],
+    user_level_data: [{
+        title: {
+            type: String,
+            maxLength: 20,
+            required: true
+        }
     }]
 }, {
     collection: 'app_config'

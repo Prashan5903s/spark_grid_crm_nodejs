@@ -13,12 +13,6 @@ const departmentController = require('../controller/Company/DepartmentAPIControl
 const channelController = require('../controller/Company/ChannelControllerAPI')
 const certificateController = require('../controller/Company/CertificateAPIController')
 const notificationController = require('../controller/Company/NotificationController');
-const programController = require('../controller/Company/ProgramControllerAPI')
-const quizAPIController = require('../controller/Company/QuizOptionController')
-const contentFolderController = require('../controller/Company/ContentFolderControllerAPI')
-const moduleController = require('../controller/Company/ModuleController')
-const activityController = require('../controller/Company/ActivityController')
-const quizSettingController = require("../controller/Company/QuizSettingController")
 const surveySettingController = require("../controller/Company/SurveySettingController")
 const moduleSettingController = require("../controller/Company/ModuleSettingController")
 const mailTemplateController = require("../controller/Company/MailTemplateController")
@@ -31,9 +25,10 @@ const createUpload = require('../util/upload');
 const uploadNotificationFiles = require('../util/createUploader');
 
 const {
-    middleware: imageUpload
+    middleware: imageExportCenterUpload
 } = createUpload(
     [
+        // Images
         'image/jpeg',
         'image/png',
         'image/gif',
@@ -41,31 +36,25 @@ const {
         'image/svg+xml',
         'image/bmp',
         'image/tiff',
-        'image/x-icon'
-    ],
-    'program_module'
-);
+        'image/x-icon',
 
-const activityUpload = createUpload(
-    [
-        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-        'image/svg+xml', 'image/bmp', 'image/tiff', 'image/x-icon',
+        // PDF
         'application/pdf',
-        'application/zip',
-        'application/x-zip-compressed',
-        'multipart/x-zip',
-        'application/octet-stream',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'video/mp4'
+
+        // Word
+        'application/msword', // .doc
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+
+        // Excel
+        'application/vnd.ms-excel', // .xls
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' // .xlsx
     ],
-    'activity',
-    2000
+    'export_center'
 );
 
 //This route is for zone
 router.get('/zone', isAuth, zoneController.getZoneAPIData);
+router.get('/zone/create/data', isAuth, zoneController.getZoneCreateData)
 router.post('/zone', isAuth, zoneController.postZoneAPI);
 router.put('/zone/:id', isAuth, zoneController.putZoneAPI);
 
@@ -152,7 +141,9 @@ router.put("/mail/template/data/:id", isAuth, mailTemplateController.putMailTemp
 
 //This route is for export center
 router.get("/export/center/data", isAuth, exportCenterController.getExportCenterController)
-router.post("/export/center/create", isAuth, exportCenterController.postExportCenterController)
+router.get("/export/create/data", isAuth, exportCenterController.getCreateDataController)
+router.post('/export/post/data', isAuth, imageExportCenterUpload("file"), exportCenterController.postExportDataController)
+router?.put("/export/put/data/:id", isAuth, imageExportCenterUpload("file"), exportCenterController.putExportCenterController)
 
 //This route is for schedule notification
 router.get("/schedule/notification", isAuth, scheduleNotificationController.getScheduleNotification)
@@ -162,5 +153,7 @@ router.get("/schedule/notification/create/data", isAuth, scheduleNotificationCon
 router.delete("/schedule/notification/delete/:id", isAuth, scheduleNotificationController.deleteScheduleNotificationController)
 
 router.get("/dashboard/company/data", isAuth, dashboardController.getDashboardAPIController)
+
+router.get("/user/level/data", isAuth, dashboardController?.getUserLevelController)
 
 module.exports = router;

@@ -12,6 +12,11 @@ const notificationLogSchema = new schema({
         required: true,
         ref: "users"
     },
+    email_sent: {
+        type: String,
+        maxLength: 50,
+        required: true,
+    },
     template_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "notification_template",

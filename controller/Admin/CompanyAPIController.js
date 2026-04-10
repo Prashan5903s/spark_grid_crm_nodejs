@@ -18,7 +18,7 @@ exports.getCompanyIndexAPI = async (req, res, next) => {
     const userId = req.userId;
     const company = await User.find({
         created_by: userId
-    });
+    }).populate('designation_id');
 
     res.status(200).json({
         'status': 'Success',
@@ -232,6 +232,7 @@ exports.editCompanyAPI = async (req, res, next) => {
                         last_name: 1,
                         email: 1,
                         photo: 1,
+                        user_level_id: 1,
                         phone: 1,
                     }
                 }],
@@ -260,6 +261,7 @@ exports.editCompanyAPI = async (req, res, next) => {
                 last_name: 1,
                 package_id: 1,
                 photo: 1,
+                user_level_id: 1,
                 country_id: 1,
                 state_id: 1,
                 city_id: 1,

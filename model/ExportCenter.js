@@ -1,29 +1,30 @@
 const mongoose = require('mongoose')
 
 const exportCenter = new mongoose.Schema({
-    user_id: {
+    document_type_id: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: "users"
+        ref: "document_type",
+        required: true
     },
-    report_type: {
+    user_type_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "user_type",
+        required: true
+    },
+    title: {
         type: String,
         required: true,
         maxlength: 255
-    },
-    status: {
-        type: String,
-        enum: ['pending', 'in_progress', 'completed', 'failed'],
-        default: 'pending'
     },
     file_path: {
         type: String,
         required: false,
         maxlength: 255
     },
-    progress_percent: {
-        type: Number,
-        default: 0
+    description: {
+        type: String,
+        maxLength: 5000,
+        required: false
     },
     created_by: {
         type: mongoose.Schema.Types.ObjectId,

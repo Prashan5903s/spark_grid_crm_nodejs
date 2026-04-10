@@ -3,17 +3,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const scheduleTypeSchema = new Schema({
-    company_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: "companies"
-    },
-    module_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: "Module"
-    },
-    schedule_id: {
+    export_center_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
         ref: "program_schedules"
@@ -26,6 +16,11 @@ const scheduleTypeSchema = new Schema({
     type_id: {
         type: mongoose.Schema.Types.ObjectId, // ID of designation/department/group/region/user
         required: true,
+    },
+    created_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
+        required: true
     },
     created_at: {
         type: Date,

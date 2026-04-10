@@ -640,3 +640,16 @@ exports.getDashboardAPIController = async (req, res, next) => {
         next(error);
     }
 };
+
+exports.getUserLevelController = async (req, res, next) => {
+    try {
+
+        const appConfig = await AppConfig.findOne({ type: "user_level_data" })
+        const data = appConfig?.user_level_data;
+
+        return successResponse(res, "User Level data fetched", data)
+
+    } catch (error) {
+        next(error)
+    }
+}

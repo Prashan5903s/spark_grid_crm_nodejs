@@ -131,9 +131,14 @@ const userSchema = new Schema({
     is_verified: {
         type: Boolean
     },
+    user_level_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false,
+    },
     reporting_manager_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: false,
+        ref: "users"
     },
     created_at: {
         type: Date,
@@ -177,6 +182,16 @@ const userSchema = new Schema({
     department_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "departments",
+        set: v => (v === '' ? undefined : v)
+    },
+    country_level_id: {
+        type: String,
+        maxLength: 100,
+        required: false,
+    },
+    branch_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "branchs",
         set: v => (v === '' ? undefined : v)
     },
     region_id: {

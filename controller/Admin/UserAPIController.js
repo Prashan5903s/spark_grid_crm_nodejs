@@ -1,3 +1,4 @@
+const mongoose = require("mongoose")
 const bcrypt = require('bcryptjs')
 const Role = require('../../model/Role');
 const User = require('../../model/User');
@@ -34,8 +35,8 @@ exports.createUserAPI = async (req, res, next) => {
         const allowedFields = [
             'first_name', 'first_name_search', 'last_name', 'email', 'country_id', 'state_id',
             'city_id', 'address', 'status', 'phone', 'dob', 'website', 'reporting_manager_id',
-            'pincode', 'designation_id', 'urn_no', 'idfa_code',
-            'application_no', 'licence_no', 'zone_id', 'employee_type', 'participation_type_id'
+            'pincode', 'designation_id', 'urn_no', 'idfa_code', 'user_level_id', "country_level_id",
+            'application_no', 'licence_no', 'zone_id', 'region_id', 'branch_id', 'employee_type', 'participation_type_id'
         ];
 
         const existingUserEmail = await User.findOne({ email_hash: hash(normalizeEmail(req.body.email)), company_id: userId });
@@ -49,6 +50,28 @@ exports.createUserAPI = async (req, res, next) => {
         }
 
         const userData = pick(req.body, allowedFields);
+
+        // CLEAN OBJECT IDs (MAIN FIX)
+        const objectIdFields = [
+            'reporting_manager_id',
+            'zone_id',
+            'region_id',
+            'branch_id',
+            'designation_id',
+            'user_level_id',
+            'participation_type_id',
+        ];
+
+        for (const field of objectIdFields) {
+            if (userData[field] === "" || userData[field] === null) {
+                delete userData[field];
+            } else if (
+                userData[field] &&
+                !mongoose.Types.ObjectId.isValid(userData[field])
+            ) {
+                return errorResponse(res, `Invalid ${field}`, 400); // now works correctly
+            }
+        }
 
         const hashedPassword = await bcrypt.hash(req.body.password, 12);
 
@@ -212,13 +235,35 @@ exports.updateUserAPI = async (req, res, next) => {
             : undefined;
 
         const allowedFields = [
-            'first_name', 'last_name', 'email', 'country_id', 'state_id',
-            'city_id', 'address', 'status', 'phone', 'dob', 'website',
+            'first_name', 'last_name', 'email', 'country_id', 'state_id', "country_level_id",
+            'city_id', 'address', 'status', 'phone', 'dob', 'website', 'user_level_id',
             'pincode', 'designation_id', 'urn_no', 'idfa_code', 'reporting_manager_id',
-            'application_no', 'licence_no', 'zone_id', 'employee_type', 'participation_type_id'
+            'application_no', 'licence_no', 'zone_id', 'region_id', 'branch_id', 'employee_type', 'participation_type_id'
         ];
 
         const updateData = pick(req.body, allowedFields);
+
+        // CLEAN OBJECT IDs (MAIN FIX)
+        const objectIdFields = [
+            'reporting_manager_id',
+            'zone_id',
+            'region_id',
+            'branch_id',
+            'designation_id',
+            'user_level_id',
+            'participation_type_id',
+        ];
+
+        for (const field of objectIdFields) {
+            if (updateData[field] === "" || updateData[field] === null) {
+                delete updateData[field];
+            } else if (
+                updateData[field] &&
+                !mongoose.Types.ObjectId.isValid(updateData[field])
+            ) {
+                return errorResponse(res, `Invalid ${field}`, 400); // now works correctly
+            }
+        }
 
         // Optional password update
         if (req.body.password) {

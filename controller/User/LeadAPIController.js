@@ -465,8 +465,6 @@ exports.postLeadController = async (req, res, next) => {
 
         const { company_name, solution_id, address, average_monthly_consumption, city_id, email, lead_status_id, name, phone, pincode, sanctioned_load, source_id, state_id } = req?.body
 
-        console.log("Data", company_name, solution_id, address, average_monthly_consumption, city_id, email, lead_status_id, name, phone, pincode, sanctioned_load, source_id, state_id);
-
         const lead = new Lead({
             name,
             address,
@@ -479,6 +477,7 @@ exports.postLeadController = async (req, res, next) => {
             city_id,
             state_id,
             lead_status_id,
+            is_converted: false,
             source_id: convertVar(source_id),
             sanctioned_load,
             assigned_user_id: userId,
@@ -510,6 +509,8 @@ exports.putLeadAPIController = async (req, res, next) => {
             return errorResponse(res, "Leads does not exist", {}, 404)
         }
 
+        const isConverted = (lead_status_id == "69d5dfb78c890e742280d9cb")
+
         await Lead.findByIdAndUpdate(id, {
             company_name,
             name,
@@ -521,6 +522,7 @@ exports.putLeadAPIController = async (req, res, next) => {
             city_id,
             state_id,
             lead_status_id,
+            is_converted: isConverted,
             source_id: convertVar(source_id),
             solution_id: convertVar(solution_id),
             sanctioned_load,
