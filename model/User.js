@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
-const { Schema, Types } = mongoose;
+const {
+    Schema,
+    Types
+} = mongoose;
 const {
     encrypt,
     decrypt,
@@ -15,8 +18,10 @@ const UserCodeSchema = new mongoose.Schema({
         unique: false // unique across users? handled manually
     },
     issued_on: Date, // Optional: date when it was issued
-    type: String      // Optional: internal, external, etc.
-}, { _id: true }); // Avoids creating _id for sub-docs
+    type: String // Optional: internal, external, etc.
+}, {
+    _id: true
+}); // Avoids creating _id for sub-docs
 
 const userSchema = new Schema({
     company_id: {
@@ -229,7 +234,13 @@ userSchema.virtual('roles', {
     justOne: false
 });
 
-userSchema.set('toJSON', { virtuals: true, getters: true });
-userSchema.set('toObject', { virtuals: true, getters: true });
+userSchema.set('toJSON', {
+    virtuals: true,
+    getters: true
+});
+userSchema.set('toObject', {
+    virtuals: true,
+    getters: true
+});
 
 module.exports = mongoose.model("users", userSchema);
