@@ -3,17 +3,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const scheduleUserSchema = new Schema({
-    company_id: {
-        type: mongoose.Schema.Types.ObjectId, // BIGINT
-        required: true, // company_id is required
-        ref: 'users', // Reference to 'companies' collection
-    },
-    module_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: "Module"
-    },
-    schedule_id: {
+    export_center_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
         ref: "program_schedules"
@@ -32,6 +22,11 @@ const scheduleUserSchema = new Schema({
         type: mongoose.Schema.Types.ObjectId, // BIGINT
         required: true, // type_id is required
         ref: "users"
+    },
+    created_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
+        required: true,
     },
     created_at: {
         type: Date, // TIMESTAMP

@@ -5,12 +5,13 @@ const mongoose = require('mongoose');
 const flash = require('connect-flash');
 const authRoute = require('./route/auth');
 const adminRoute = require('./route/admin');
+const AppConfig = require("./model/AppConfig")
 const Notification = require("./model/Notifications")
 const companyRouter = require('./route/company');
 const userRouter = require('./route/user');
 const scheduleNotificationCommand = require("./command/ScheduleNotification")
 
-// New changes
+// require('./worker/reportWorker')
 
 const path = require('path');
 const fs = require('fs');
@@ -76,11 +77,8 @@ app.use((error, req, res, next) => {
 // Start server
 mongoose.connect(MongoURL)
     .then(() => {
-        const server = app.listen(port, () => console.log(`Server started on ${port}`));
-
-        server.setTimeout(1000 * 60 * 20); // 20 minutes
-        server.keepAliveTimeout = 1000 * 60 * 20;
-        server.headersTimeout = 1000 * 60 * 20;
+        
+        app.listen(port, () => console.log(`Server started on ${port}`));
 
     })
     .catch(err => {

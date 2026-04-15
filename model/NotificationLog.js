@@ -3,14 +3,6 @@ const mongoose = require("mongoose");
 const schema = mongoose.Schema;
 
 const notificationLogSchema = new schema({
-    attemptNo: {
-        type: Number,
-        required: true
-    },
-    reason: {
-        type: String,
-        required: true
-    },
     schedule_date: {
         type: Date,
         required: true
@@ -20,10 +12,10 @@ const notificationLogSchema = new schema({
         required: true,
         ref: "users"
     },
-    company_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "users",
-        required: true
+    email_sent: {
+        type: String,
+        maxLength: 50,
+        required: true,
     },
     template_id: {
         type: mongoose.Schema.Types.ObjectId,

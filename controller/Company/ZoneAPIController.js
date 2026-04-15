@@ -1,13 +1,54 @@
+const mongoose = require("mongoose")
 const Zone = require('../../model/Zone');
 const User = require('../../model/User');
-const validation = require('../../util/validation')
+const Country = require("../../model/Country")
+const validation = require('../../util/validation');
+const { successResponse } = require('../../util/response');
+
 
 exports.getZoneAPIData = async (req, res, next) => {
     try {
 
         const userId = req.userId;
 
-        const data = await Zone.find({ created_by: userId });
+        const data = await Zone.aggregate([
+            {
+                $match: {
+                    created_by: mongoose.Types.ObjectId.createFromHexString(userId)
+                }
+            },
+            {
+                $lookup: {
+                    from: "countries",
+                    let: { country_id: "$country_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: [
+                                        { $toInt: "$$country_id" }, // ✅ correct
+                                        "$country_id"              // already Number in countries
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            $project: {
+                                country_id: 1,
+                                country_name: 1
+                            }
+                        }
+                    ],
+                    as: "country"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$country",
+                    preserveNullAndEmptyArrays: true
+                }
+            }
+        ]);
 
         res.status(200).json({
             status: "Success",
@@ -37,6 +78,7 @@ exports.postZoneAPI = async (req, res, next) => {
             for (const item of zones) {
                 const zone = new Zone({
                     name: item.name,
+                    country_id: item.country_id,
                     created_by: userId,
                     company_id: user.company_id,
                     master_company_id: user.master_company_id,
@@ -85,9 +127,10 @@ exports.putZoneAPI = async (req, res, next) => {
             })
         }
 
-        const { name } = req.body;
+        const { name, country_id } = req.body;
 
         zone.name = name;
+        zone.country_id = country_id;
 
         await zone.save();
 
@@ -97,6 +140,22 @@ exports.putZoneAPI = async (req, res, next) => {
             message: "Zone updated successfully!",
             name
         });
+
+    } catch (error) {
+        next(error)
+    }
+}
+
+exports.getZoneCreateData = async (req, res, next) => {
+    try {
+
+        const country = await Country.find();
+
+        const finalData = {
+            country
+        }
+
+        return successResponse(res, "Create data fetched successfully", finalData)
 
     } catch (error) {
         next(error)

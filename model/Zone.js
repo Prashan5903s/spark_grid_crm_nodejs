@@ -12,6 +12,11 @@ const zoneSchema = new Schema({
         default: true,
         required: false
     },
+    country_id: {
+        type: String,
+        ref: "countries",
+        required: true
+    },
     company_id: {
         type: Schema.Types.Mixed,
         required: true,

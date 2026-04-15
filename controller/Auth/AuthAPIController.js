@@ -16,11 +16,12 @@ exports.postAPILogIn = async (req, res, next) => {
 
         if (!validate(req, res)) return;
 
-
+        const companyId = "68538f50752fe999fdf22797";
+        const notificationId = "6878cd0351dcbae6759e8912";
 
         const { email, password, } = req.body;
 
-        const normalizedEmail = String(email).trim();
+        const normalizedEmail = email;
 
         const user = await User.findOne({ email_hash: hash(normalizeEmail(normalizedEmail)) });
 

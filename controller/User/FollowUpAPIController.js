@@ -1,6 +1,7 @@
+const mongoose = require("mongoose")
 const Lead = require("../../model/Leads")
-const AppConfig = require("../../model/AppConfig")
 const FollowUp = require("../../model/FollowUp");
+const AppConfig = require("../../model/AppConfig")
 const { successResponse, errorResponse } = require("../../util/response");
 
 exports.getFollowUpController = async (req, res, next) => {
@@ -93,8 +94,11 @@ exports.postFollowUpController = async (req, res, next) => {
 
         await follow_up.save();
 
+        const isConverted = (lead_status_id == "69d5dfb78c890e742280d9cb")
+
         await Lead.findByIdAndUpdate(leadId, {
-            lead_status_id
+            lead_status_id,
+            is_converted: isConverted
         })
 
         return successResponse(res, "Follow Up created successfully")
@@ -103,3 +107,191 @@ exports.postFollowUpController = async (req, res, next) => {
         next(error)
     }
 }
+
+exports.postFilterFollowUpController = async (req, res, next) => {
+    try {
+        const userId = req?.userId;
+        const { type, status, startDate, endDate } = req.body || {};
+
+        let filter = {
+            created_by: mongoose.Types.ObjectId.createFromHexString(userId)
+        };
+
+        // Get today's and tomorrow's date ranges
+        const now = new Date();
+
+        if (type === "today") {
+            const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+            const endOfDay = new Date(now.setHours(23, 59, 59, 999));
+
+            filter.follow_up_date = {
+                $gte: startOfDay,
+                $lte: endOfDay
+            };
+        }
+
+        if (type === "tommorow") {
+
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            const startOfTomorrow = new Date(tomorrow.setHours(0, 0, 0, 0));
+            const endOfTomorrow = new Date(tomorrow.setHours(23, 59, 59, 999));
+
+            filter.follow_up_date = {
+                $gte: startOfTomorrow,
+                $lte: endOfTomorrow
+            };
+        }
+
+        if (status) {
+            filter.status = mongoose.Types.ObjectId.createFromHexString(status);
+        }
+
+        if (startDate && endDate) {
+
+            const startRangeDate = new Date(startDate);
+            const endRangeDate = new Date(endDate);
+
+            filter.follow_up_date = {
+                $gte: startRangeDate,
+                $lte: endRangeDate
+            }
+        }
+
+        const followUp = await FollowUp.aggregate([
+            {
+                $match: filter
+            },
+            {
+                $lookup: {
+                    from: "app_config",
+                    pipeline: [
+                        { $match: { type: "follow_up_data" } }
+                    ],
+                    as: "config"
+                }
+            },
+            {
+                $unwind: "$config"
+            },
+            {
+                $addFields: {
+                    status_data: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: "$config.follow_up_status_data",
+                                    as: "status",
+                                    cond: { $eq: ["$$status._id", "$status"] }
+                                }
+                            },
+                            0
+                        ]
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    follow_up_type_data: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: "$config.follow_up_type_data",
+                                    as: "type",
+                                    cond: { $eq: ["$$type._id", "$follow_up_type"] }
+                                }
+                            },
+                            0
+                        ]
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    priority_data: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: "$config.follow_up_priority_data",
+                                    as: "priority",
+                                    cond: { $eq: ["$$priority._id", "$priority"] }
+                                }
+                            },
+                            0
+                        ]
+                    }
+                }
+            },
+            {
+                $project: {
+                    config: 0
+                }
+            }
+        ]);
+
+        return successResponse(res, "Follow up fetched successfully", followUp);
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.putFollowUpController = async (req, res, next) => {
+    try {
+        const userId = req?.userId;
+        const { id } = req?.params;
+
+        const {
+            follow_up_date,
+            follow_up_type,
+            lead_status_id,
+            next_follow_up_date,
+            notes,
+            priority,
+            reminder_before,
+            status
+        } = req?.body;
+
+        // Build update object dynamically (only include defined fields)
+        const updateData = {};
+
+        const exist = await FollowUp.findOne({ _id: id, created_by: userId, })
+
+        if (!exist) {
+            return errorResponse(res, "Follow Up not found");
+        }
+
+        const leadId = exist?.lead_id;
+
+        const isConverted = (lead_status_id == "69d5dfb78c890e742280d9cb")
+
+        await Lead.findByIdAndUpdate(leadId, {
+            lead_status_id,
+            is_converted: isConverted
+        })
+
+        if (status) updateData.status = status;
+        if (follow_up_type) updateData.follow_up_type = follow_up_type;
+        if (follow_up_date) updateData.follow_up_date = new Date(follow_up_date);
+        if (next_follow_up_date) updateData.next_follow_up_date = new Date(next_follow_up_date);
+        if (notes) updateData.notes = notes;
+        if (priority) updateData.priority = priority;
+        if (reminder_before !== undefined) updateData.reminder_before = reminder_before;
+        if (lead_status_id) updateData["lead_data.lead_status_id"] = lead_status_id;
+
+        const updated = await FollowUp.findOneAndUpdate(
+            { _id: id, created_by: userId, },
+            { $set: updateData },
+            {
+                new: true,
+                runValidators: true
+            }
+        );
+
+        return successResponse(res, "Follow Up updated successfully", updated);
+
+    } catch (error) {
+        next(error);
+    }
+};

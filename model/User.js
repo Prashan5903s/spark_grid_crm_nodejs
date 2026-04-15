@@ -1,8 +1,5 @@
 const mongoose = require('mongoose');
-const {
-    Schema,
-    Types
-} = mongoose;
+const { Schema, Types } = mongoose;
 const {
     encrypt,
     decrypt,
@@ -18,10 +15,8 @@ const UserCodeSchema = new mongoose.Schema({
         unique: false // unique across users? handled manually
     },
     issued_on: Date, // Optional: date when it was issued
-    type: String // Optional: internal, external, etc.
-}, {
-    _id: true
-}); // Avoids creating _id for sub-docs
+    type: String      // Optional: internal, external, etc.
+}, { _id: true }); // Avoids creating _id for sub-docs
 
 const userSchema = new Schema({
     company_id: {
@@ -136,6 +131,15 @@ const userSchema = new Schema({
     is_verified: {
         type: Boolean
     },
+    user_level_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false,
+    },
+    reporting_manager_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false,
+        ref: "users"
+    },
     created_at: {
         type: Date,
         default: Date.now
@@ -178,6 +182,16 @@ const userSchema = new Schema({
     department_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "departments",
+        set: v => (v === '' ? undefined : v)
+    },
+    country_level_id: {
+        type: String,
+        maxLength: 100,
+        required: false,
+    },
+    branch_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "branchs",
         set: v => (v === '' ? undefined : v)
     },
     region_id: {
@@ -234,13 +248,7 @@ userSchema.virtual('roles', {
     justOne: false
 });
 
-userSchema.set('toJSON', {
-    virtuals: true,
-    getters: true
-});
-userSchema.set('toObject', {
-    virtuals: true,
-    getters: true
-});
+userSchema.set('toJSON', { virtuals: true, getters: true });
+userSchema.set('toObject', { virtuals: true, getters: true });
 
 module.exports = mongoose.model("users", userSchema);

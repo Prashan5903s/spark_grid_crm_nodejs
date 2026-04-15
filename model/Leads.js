@@ -61,6 +61,11 @@ const leadSchema = new mongoose.Schema({
         maxLength: 6,
         required: false
     },
+    is_converted: {
+        type: Boolean,
+        default: false,
+        required: true
+    },
     assigned_user_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "users",

@@ -13,6 +13,11 @@ const appConfigSchema = new mongoose.Schema({
             required: true,
             maxlength: 255
         },
+        color: {
+            type: String,
+            required: true,
+            maxLength: 10
+        }
     }],
     leads_source_data: [{
         title: {
@@ -54,6 +59,13 @@ const appConfigSchema = new mongoose.Schema({
             type: String,
             required: true,
             maxLength: 255
+        }
+    }],
+    user_level_data: [{
+        title: {
+            type: String,
+            maxLength: 20,
+            required: true
         }
     }]
 }, {
