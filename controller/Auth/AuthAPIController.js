@@ -5,8 +5,15 @@ const User = require('../../model/User');
 const validate = require('../../util/validation');
 const LogSession = require("../../model/LoginSession");
 const BlacklistedToken = require('../../model/BlacklistedToken');
-const { hash, normalizeEmail, decrypt } = require('../../util/encryption');
-const { errorResponse, successResponse } = require('../../util/response');
+const {
+    hash,
+    normalizeEmail,
+    decrypt
+} = require('../../util/encryption');
+const {
+    errorResponse,
+    successResponse
+} = require('../../util/response');
 
 const jwtSecretKey = process.env.JWT_SECRET;
 const expireTime = Number(process.env.token_expire_time);
@@ -16,14 +23,16 @@ exports.postAPILogIn = async (req, res, next) => {
 
         if (!validate(req, res)) return;
 
-        const companyId = "68538f50752fe999fdf22797";
-        const notificationId = "6878cd0351dcbae6759e8912";
-
-        const { email, password, } = req.body;
+        const {
+            email,
+            password,
+        } = req.body;
 
         const normalizedEmail = email;
 
-        const user = await User.findOne({ email_hash: hash(normalizeEmail(normalizedEmail)) });
+        const user = await User.findOne({
+            email_hash: hash(normalizeEmail(normalizedEmail))
+        });
 
         if (!user) {
 
@@ -45,13 +54,13 @@ exports.postAPILogIn = async (req, res, next) => {
         const expiresInSeconds = expireTime * 60 * 60;
         const expirationTimestamp = Math.floor(Date.now() / 1000) + expiresInSeconds;
 
-        const token = jwt.sign(
-            {
+        const token = jwt.sign({
                 email: user.email,
                 userId: user._id.toString(),
             },
-            jwtSecretKey,
-            { expiresIn: `${expireTime}h` }
+            jwtSecretKey, {
+                expiresIn: `${expireTime}h`
+            }
         );
 
         const logSession = new LogSession({
@@ -70,6 +79,7 @@ exports.postAPILogIn = async (req, res, next) => {
             token,
             expiresAt: expirationTimestamp,
             userId: user._id.toString(),
+            userLevelId: user.user_level_id || "",
             email,
             name: `${user.first_name} ${user.last_name}`
         });
