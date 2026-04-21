@@ -1,23 +1,33 @@
 const mongoose = require("mongoose")
+
+const User = require("../../model/User")
+const Zone = require("../../model/Zone")
 const Lead = require("../../model/Leads");
 const Country = require("../../model/Country")
 const AppConfig = require("../../model/AppConfig")
-const { successResponse, errorResponse } = require("../../util/response");
+
+const {
+    successResponse,
+    errorResponse
+} = require("../../util/response");
 
 exports.getLeadAPIController = async (req, res, next) => {
     try {
 
         const userId = req?.userId;
 
-        const { type } = req?.params;
+        const {
+            type
+        } = req?.params;
 
         let finalData = [];
 
         if (type === "kanban") {
 
-            const data = await AppConfig.aggregate([
-                {
-                    $match: { type: "leads_data" }
+            const data = await AppConfig.aggregate([{
+                    $match: {
+                        type: "leads_data"
+                    }
                 },
                 {
                     $unwind: "$leads_status_data"
@@ -29,13 +39,15 @@ exports.getLeadAPIController = async (req, res, next) => {
                             statusId: "$leads_status_data._id",
                             userId: mongoose.Types.ObjectId.createFromHexString(userId)
                         },
-                        pipeline: [
-                            {
+                        pipeline: [{
                                 $match: {
                                     $expr: {
-                                        $and: [
-                                            { $eq: ["$lead_status_id", "$$statusId"] },
-                                            { $eq: ["$created_by", "$$userId"] } // ✅ FILTER HERE
+                                        $and: [{
+                                                $eq: ["$lead_status_id", "$$statusId"]
+                                            },
+                                            {
+                                                $eq: ["$created_by", "$$userId"]
+                                            } // ✅ FILTER HERE
                                         ]
                                     }
                                 }
@@ -43,14 +55,21 @@ exports.getLeadAPIController = async (req, res, next) => {
                             {
                                 $lookup: {
                                     from: "follow_up",
-                                    let: { leadId: "$_id" },
-                                    pipeline: [
-                                        {
+                                    let: {
+                                        leadId: "$_id"
+                                    },
+                                    pipeline: [{
                                             $match: {
-                                                $expr: { $eq: ["$lead_id", "$$leadId"] }
+                                                $expr: {
+                                                    $eq: ["$lead_id", "$$leadId"]
+                                                }
                                             }
                                         },
-                                        { $sort: { created_at: -1 } }
+                                        {
+                                            $sort: {
+                                                created_at: -1
+                                            }
+                                        }
                                     ],
                                     as: "followUp"
                                 }
@@ -64,8 +83,9 @@ exports.getLeadAPIController = async (req, res, next) => {
                             {
                                 $addFields: {
                                     followUp: {
-                                        $cond: [
-                                            { $ifNull: ["$followUp._id", false] },
+                                        $cond: [{
+                                                $ifNull: ["$followUp._id", false]
+                                            },
                                             "$followUp",
                                             null
                                         ]
@@ -80,13 +100,15 @@ exports.getLeadAPIController = async (req, res, next) => {
                                         priorityId: "$followUp.priority",
                                         typeId: "$followUp.follow_up_type"
                                     },
-                                    pipeline: [
-                                        { $match: { type: "follow_up_data" } },
+                                    pipeline: [{
+                                            $match: {
+                                                type: "follow_up_data"
+                                            }
+                                        },
                                         {
                                             $addFields: {
                                                 status: {
-                                                    $arrayElemAt: [
-                                                        {
+                                                    $arrayElemAt: [{
                                                             $filter: {
                                                                 input: "$follow_up_status_data",
                                                                 as: "item",
@@ -99,8 +121,7 @@ exports.getLeadAPIController = async (req, res, next) => {
                                                     ]
                                                 },
                                                 priority: {
-                                                    $arrayElemAt: [
-                                                        {
+                                                    $arrayElemAt: [{
                                                             $filter: {
                                                                 input: "$follow_up_priority_data",
                                                                 as: "item",
@@ -113,8 +134,7 @@ exports.getLeadAPIController = async (req, res, next) => {
                                                     ]
                                                 },
                                                 follow_up_type: {
-                                                    $arrayElemAt: [
-                                                        {
+                                                    $arrayElemAt: [{
                                                             $filter: {
                                                                 input: "$follow_up_type_data",
                                                                 as: "item",
@@ -161,11 +181,14 @@ exports.getLeadAPIController = async (req, res, next) => {
                             {
                                 $group: {
                                     _id: "$_id",
-                                    doc: { $first: "$$ROOT" },
+                                    doc: {
+                                        $first: "$$ROOT"
+                                    },
                                     followUps: {
                                         $push: {
-                                            $cond: [
-                                                { $ifNull: ["$followUp._id", false] },
+                                            $cond: [{
+                                                    $ifNull: ["$followUp._id", false]
+                                                },
                                                 "$followUp",
                                                 "$$REMOVE"
                                             ]
@@ -175,11 +198,15 @@ exports.getLeadAPIController = async (req, res, next) => {
                             },
                             {
                                 $addFields: {
-                                    "doc.followUp": { $ifNull: ["$followUps", []] }
+                                    "doc.followUp": {
+                                        $ifNull: ["$followUps", []]
+                                    }
                                 }
                             },
                             {
-                                $replaceRoot: { newRoot: "$doc" }
+                                $replaceRoot: {
+                                    newRoot: "$doc"
+                                }
                             }
                         ],
                         as: "leads"
@@ -198,8 +225,7 @@ exports.getLeadAPIController = async (req, res, next) => {
 
         } else {
 
-            const leads = await Lead.aggregate([
-                {
+            const leads = await Lead.aggregate([{
                     $match: {
                         created_by: mongoose.Types.ObjectId.createFromHexString(userId)
                     }
@@ -209,15 +235,20 @@ exports.getLeadAPIController = async (req, res, next) => {
                 {
                     $lookup: {
                         from: "follow_up",
-                        let: { leadId: "$_id" },
-                        pipeline: [
-                            {
+                        let: {
+                            leadId: "$_id"
+                        },
+                        pipeline: [{
                                 $match: {
-                                    $expr: { $eq: ["$lead_id", "$$leadId"] }
+                                    $expr: {
+                                        $eq: ["$lead_id", "$$leadId"]
+                                    }
                                 }
                             },
                             {
-                                $sort: { created_at: -1 } // descending order
+                                $sort: {
+                                    created_at: -1
+                                } // descending order
                             }
                         ],
                         as: "followUp"
@@ -236,8 +267,9 @@ exports.getLeadAPIController = async (req, res, next) => {
                 {
                     $addFields: {
                         followUp: {
-                            $cond: [
-                                { $ifNull: ["$followUp._id", false] },
+                            $cond: [{
+                                    $ifNull: ["$followUp._id", false]
+                                },
                                 "$followUp",
                                 null
                             ]
@@ -254,8 +286,7 @@ exports.getLeadAPIController = async (req, res, next) => {
                             priorityId: "$followUp.priority",
                             typeId: "$followUp.follow_up_type"
                         },
-                        pipeline: [
-                            {
+                        pipeline: [{
                                 $match: {
                                     type: "follow_up_data"
                                 }
@@ -270,8 +301,7 @@ exports.getLeadAPIController = async (req, res, next) => {
                             {
                                 $addFields: {
                                     status: {
-                                        $arrayElemAt: [
-                                            {
+                                        $arrayElemAt: [{
                                                 $filter: {
                                                     input: "$follow_up_status_data",
                                                     as: "item",
@@ -284,8 +314,7 @@ exports.getLeadAPIController = async (req, res, next) => {
                                         ]
                                     },
                                     priority: {
-                                        $arrayElemAt: [
-                                            {
+                                        $arrayElemAt: [{
                                                 $filter: {
                                                     input: "$follow_up_priority_data",
                                                     as: "item",
@@ -298,8 +327,7 @@ exports.getLeadAPIController = async (req, res, next) => {
                                         ]
                                     },
                                     follow_up_type: {
-                                        $arrayElemAt: [
-                                            {
+                                        $arrayElemAt: [{
                                                 $filter: {
                                                     input: "$follow_up_type_data",
                                                     as: "item",
@@ -352,11 +380,14 @@ exports.getLeadAPIController = async (req, res, next) => {
                 {
                     $group: {
                         _id: "$_id",
-                        doc: { $first: "$$ROOT" },
+                        doc: {
+                            $first: "$$ROOT"
+                        },
                         followUps: {
                             $push: {
-                                $cond: [
-                                    { $ifNull: ["$followUp._id", false] },
+                                $cond: [{
+                                        $ifNull: ["$followUp._id", false]
+                                    },
                                     "$followUp",
                                     "$$REMOVE"
                                 ]
@@ -384,10 +415,17 @@ exports.getLeadAPIController = async (req, res, next) => {
                 {
                     $lookup: {
                         from: "app_config",
-                        let: { statusId: "$lead_status_id" },
-                        pipeline: [
-                            { $match: { type: "leads_data" } },
-                            { $unwind: "$leads_status_data" },
+                        let: {
+                            statusId: "$lead_status_id"
+                        },
+                        pipeline: [{
+                                $match: {
+                                    type: "leads_data"
+                                }
+                            },
+                            {
+                                $unwind: "$leads_status_data"
+                            },
                             {
                                 $match: {
                                     $expr: {
@@ -430,10 +468,27 @@ exports.getLeadAPIController = async (req, res, next) => {
 exports.getCreateLeadAPIController = async (req, res, next) => {
     try {
 
-        const country = await Country.findOne({ _id: "6821e073c67f35e8ab742e21" })
+        const userId = req?.userId;
+
+        const user_curr = await User.findById(userId)
+        const masterId = user_curr?.created_by;
+
+        const country = await Country.findOne({
+            _id: "6821e073c67f35e8ab742e21"
+        })
         const states = country?.states || [];
 
-        const appConfig = await AppConfig.findOne({ type: "leads_data" })
+        const zones = await Zone.find({
+            created_by: masterId
+        });
+
+        const branchData = zones.flatMap(z =>
+            (z.region || []).flatMap(r => r.branch || [])
+        );
+
+        const appConfig = await AppConfig.findOne({
+            type: "leads_data"
+        })
         const sourceData = appConfig?.leads_source_data || [];
         const statusData = appConfig?.leads_status_data || [];
         const solutionData = appConfig?.solution_data || [];
@@ -442,6 +497,7 @@ exports.getCreateLeadAPIController = async (req, res, next) => {
             states,
             statusData,
             sourceData,
+            branchData,
             solutionData,
         }
 
@@ -463,7 +519,22 @@ exports.postLeadController = async (req, res, next) => {
 
         const userId = req?.userId;
 
-        const { company_name, solution_id, address, average_monthly_consumption, city_id, email, lead_status_id, name, phone, pincode, sanctioned_load, source_id, state_id } = req?.body
+        const {
+            company_name,
+            solution_id,
+            branch_id,
+            address,
+            average_monthly_consumption,
+            city_id,
+            email,
+            lead_status_id,
+            name,
+            phone,
+            pincode,
+            sanctioned_load,
+            source_id,
+            state_id
+        } = req?.body
 
         const lead = new Lead({
             name,
@@ -474,6 +545,7 @@ exports.postLeadController = async (req, res, next) => {
             email,
             phone,
             average_monthly_consumption,
+            branch_id,
             city_id,
             state_id,
             lead_status_id,
@@ -499,9 +571,26 @@ exports.putLeadAPIController = async (req, res, next) => {
     try {
 
         const userId = req?.userId;
-        const { id } = req?.params;
+        const {
+            id
+        } = req?.params;
 
-        const { company_name, solution_id, address, average_monthly_consumption, city_id, email, lead_status_id, name, phone, pincode, sanctioned_load, source_id, state_id } = req?.body
+        const {
+            company_name,
+            solution_id,
+            address,
+            average_monthly_consumption,
+            city_id,
+            email,
+            branch_id,
+            lead_status_id,
+            name,
+            phone,
+            pincode,
+            sanctioned_load,
+            source_id,
+            state_id
+        } = req?.body
 
         const existingLead = await Lead.findById(id);
 
@@ -519,6 +608,7 @@ exports.putLeadAPIController = async (req, res, next) => {
             email,
             phone,
             average_monthly_consumption,
+            branch_id,
             city_id,
             state_id,
             lead_status_id,

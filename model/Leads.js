@@ -13,6 +13,10 @@ const leadSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: false
     },
+    branch_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true
+    },
     company_name: {
         type: String,
         maxLength: 255,

@@ -72,7 +72,9 @@
 
     exports.getDashboardAPI = async (req, res, next) => {
         try {
+
             const userId = mongoose.Types.ObjectId.createFromHexString(req.userId);
+
             const {
                 from,
                 to,
@@ -150,124 +152,195 @@
             });
 
             const finalZoneLead = [];
+            let finalFilterMessage = "Zone data";
 
-            let finalFilterMessage = "Zone data"
+            // helper to calculate stats
+            const calculateStats = (leads) => ({
+                totalLead: leads.length,
+                totalConvert: leads.filter(l => l.is_converted).length
+            });
 
             if (filteredBranchId?.length > 0) {
 
                 finalFilterMessage = "Branch performance";
 
-                const fetchBranch = await Zone.find({
+                const zonesData = await Zone.find({
                     "region.branch._id": {
                         $in: filteredBranchId
                     }
                 });
 
-                for (const z of fetchBranch) {
+                const branchMap = {};
 
-                    for (const r of z.region) {
-
-                        for (const b of r.branch) {
-
-                            if (!filteredBranchId.includes(b._id.toString())) continue;
-
-                            const branchUsers = await User.find({
-                                branch_id: b._id
-                            });
-
-                            let allUserIds = [];
-
-                            for (const user of branchUsers) {
-                                const subIds = await getAllSubordinateIds(user._id);
-                                allUserIds = allUserIds.concat(subIds);
+                zonesData.forEach(z => {
+                    z.region?.forEach(r => {
+                        r.branch?.forEach(b => {
+                            if (filteredBranchId.includes(b._id.toString())) {
+                                branchMap[b._id] = b.name;
                             }
+                        });
+                    });
+                });
 
-                            const uniqueUserIds = [...new Set(allUserIds.map(id => id.toString()))];
-
-                            const match = buildMatch(uniqueUserIds, startDate, endDate);
-                            const leads = await Lead.find(match);
-
-                            finalZoneLead.push({
-
-                                zoneName: b.name,
-                                totalLead: leads.length,
-                                totalConvert: leads.filter(l => l.is_converted).length,
-                            });
-                        }
+                const leads = await Lead.find({
+                    branch_id: {
+                        $in: Object.keys(branchMap)
+                    },
+                    created_by: {
+                        $in: userIds
                     }
-                }
+                });
+
+                const grouped = {};
+
+                leads.forEach(l => {
+                    const id = l.branch_id.toString();
+                    if (!grouped[id]) grouped[id] = [];
+                    grouped[id].push(l);
+                });
+
+                Object.keys(grouped).forEach(id => {
+                    const stats = calculateStats(grouped[id]);
+
+                    finalZoneLead.push({
+                        zoneName: branchMap[id],
+                        ...stats
+                    });
+                });
+
             } else if (filteredRegionId?.length > 0) {
 
                 finalFilterMessage = "Regional performance";
 
-                const fetchRegion = await Zone.find({
+                const zonesData = await Zone.find({
                     "region._id": {
                         $in: filteredRegionId
                     }
                 });
 
-                for (const z of fetchRegion) {
+                const regionMap = {};
+                let allBranchIds = [];
 
-                    for (const r of z.region) {
-
-                        if (!filteredRegionId.includes(r._id.toString())) continue;
-
-                        const regionUsers = await User.find({
-                            region_id: r._id
-                        });
-
-                        let allUserIds = [];
-
-                        for (const user of regionUsers) {
-                            const subIds = await getAllSubordinateIds(user._id);
-                            allUserIds = allUserIds.concat(subIds);
+                zonesData.forEach(z => {
+                    z.region?.forEach(r => {
+                        if (filteredRegionId.includes(r._id.toString())) {
+                            const branchIds = (r.branch || []).map(b => b._id);
+                            regionMap[r._id] = {
+                                name: r.name,
+                                branchIds
+                            };
+                            allBranchIds.push(...branchIds);
                         }
-
-                        const uniqueUserIds = [...new Set(allUserIds.map(id => id.toString()))];
-
-                        const match = buildMatch(uniqueUserIds, startDate, endDate);
-                        const leads = await Lead.find(match);
-
-
-                        finalZoneLead.push({
-
-                            zoneName: r.name,
-                            totalLead: leads.length,
-                            totalConvert: leads.filter(l => l.is_converted).length,
-                        });
-                    }
-                }
-            } else {
-
-                for (const z of zones) {
-
-                    const zoneUsers = await User.find({
-                        zone_id: z._id
                     });
+                });
 
-                    let allZoneUserIds = [];
-
-                    for (const user of zoneUsers) {
-                        const subIds = await getAllSubordinateIds(user._id);
-                        allZoneUserIds = allZoneUserIds.concat(subIds);
+                const leads = await Lead.find({
+                    branch_id: {
+                        $in: allBranchIds
+                    },
+                    created_by: {
+                        $in: userIds
                     }
+                });
 
-                    const uniqueUserIds = [
-                        ...new Set(allZoneUserIds.map(id => id.toString()))
-                    ];
+                Object.values(regionMap).forEach(region => {
+                    const regionLeads = leads.filter(l =>
+                        region.branchIds.some(id => id.toString() === l.branch_id.toString())
+                    );
 
-                    const zoneMatch = buildMatch(uniqueUserIds, startDate, endDate);
-                    const zoneLeads = await Lead.find(zoneMatch);
-
-                    const totalZoneLead = zoneLeads.length;
-                    const totalConvert = zoneLeads.filter(l => l.is_converted).length;
+                    const stats = calculateStats(regionLeads);
 
                     finalZoneLead.push({
-                        zoneName: z.name,
-                        totalLead: totalZoneLead,
-                        totalConvert
+                        zoneName: region.name,
+                        ...stats
                     });
-                }
+                });
+
+            } else if (filteredZoneId?.length > 0) {
+
+                const zonesData = await Zone.find({
+                    _id: {
+                        $in: filteredZoneId
+                    }
+                });
+
+                let allBranchIds = [];
+                const zoneMap = {};
+
+                zonesData.forEach(z1 => {
+                    const branchIds = (z1.region || []).flatMap(r =>
+                        (r.branch || []).map(b => b._id)
+                    );
+
+                    zoneMap[z1._id] = {
+                        name: z1.name,
+                        branchIds
+                    };
+
+                    allBranchIds.push(...branchIds);
+                });
+
+                const leads = await Lead.find({
+                    branch_id: {
+                        $in: allBranchIds
+                    },
+                    created_by: {
+                        $in: userIds
+                    }
+                });
+
+                Object.values(zoneMap).forEach(zone => {
+                    const zoneLeads = leads.filter(l =>
+                        zone.branchIds.some(id => id.toString() === l.branch_id.toString())
+                    );
+
+                    const stats = calculateStats(zoneLeads);
+
+                    finalZoneLead.push({
+                        zoneName: zone.name,
+                        ...stats
+                    });
+                });
+
+            } else {
+
+                let allBranchIds = [];
+                const zoneMap = {};
+
+                zones.forEach(z1 => {
+                    const branchIds = (z1.region || []).flatMap(r =>
+                        (r.branch || []).map(b => b._id)
+                    );
+
+                    zoneMap[z1._id] = {
+                        name: z1.name,
+                        branchIds
+                    };
+
+                    allBranchIds.push(...branchIds);
+                });
+
+                const leads = await Lead.find({
+                    branch_id: {
+                        $in: allBranchIds
+                    },
+                    created_by: {
+                        $in: userIds
+                    }
+                });
+
+                Object.values(zoneMap).forEach(zone => {
+                    const zoneLeads = leads.filter(l =>
+                        zone.branchIds.some(id => id.toString() === l.branch_id.toString())
+                    );
+
+                    const stats = calculateStats(zoneLeads);
+
+                    finalZoneLead.push({
+                        zoneName: zone.name,
+                        ...stats
+                    });
+                });
             }
 
             // ================= MONTHLY =================
