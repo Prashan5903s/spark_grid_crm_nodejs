@@ -465,9 +465,21 @@
                 }
             ]);
 
-            const zoneData = await Zone.find({
+            let filter = {
                 created_by: headUserId
-            });
+            };
+
+            if (headUser.user_level_id === "69d3a36f9e57cff228594aea") {
+                filter._id = headUser.zone_id;
+
+            } else if (headUser.user_level_id === "69d3a36f9e57cff228594aeb") {
+                filter["region._id"] = headUser.region_id;
+
+            } else {
+                filter["region.branch._id"] = headUser.branch_id;
+            }
+
+            const zoneData = await Zone.find(filter);
 
             const regionData = zoneData.map(z => ({
                 zoneId: z._id,
