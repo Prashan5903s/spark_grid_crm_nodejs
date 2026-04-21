@@ -160,6 +160,79 @@
                 totalConvert: leads.filter(l => l.is_converted).length
             });
 
+            let filter = {
+                created_by: headUserId
+            };
+
+            const level = headUser.user_level_id.toString();
+
+            // DB FILTER
+            if (level === "69d3a36f9e57cff228594aea") {
+                filter._id = headUser.zone_id;
+
+            } else if (level === "69d3a36f9e57cff228594aeb") {
+                filter["region._id"] = headUser.region_id;
+
+            } else if (level === "69d75130d9daa00434648316") {
+                // no extra filter (only created_by)
+
+            } else {
+                filter["region.branch._id"] = headUser.branch_id;
+            }
+
+            const zoneData = await Zone.find(filter);
+
+            // REGION DATA
+            const regionData = zoneData.map(z => ({
+                zoneId: z._id,
+                region: (z.region || []).filter(r => {
+
+                    //  ONLY REGION FILTER
+                    if (level === "69d3a36f9e57cff228594aeb") {
+                        return r._id.toString() === headUser.region_id.toString();
+                    }
+
+                    // NO FILTER for these levels
+                    if (
+                        level === "69d75130d9daa00434648316" ||
+                        level === "69d3a36f9e57cff228594aea"
+                    ) {
+                        return true;
+                    }
+
+                    // ONLY BRANCH FILTER
+                    return (r.branch || []).some(b =>
+                        b._id.toString() === headUser.branch_id.toString()
+                    );
+                })
+            }));
+
+            // BRANCH DATA
+            const branchData = regionData.flatMap(r =>
+                (r.region || []).map(regionItem => ({
+                    zoneId: r.zoneId,
+                    regionId: regionItem._id,
+                    branch: (regionItem.branch || []).filter(b => {
+
+                        //  NO FILTER for these levels
+                        if (
+                            level === "69d75130d9daa00434648316" ||
+                            level === "69d3a36f9e57cff228594aea"
+                        ) {
+                            return true;
+                        }
+
+                        //  NO branch filter for REGION level
+                        if (level === "69d3a36f9e57cff228594aeb") {
+                            return true;
+                        }
+
+                        // ONLY BRANCH FILTER
+                        return b._id.toString() === headUser.branch_id.toString();
+                    })
+                }))
+            );
+
             if (filteredBranchId?.length > 0) {
 
                 finalFilterMessage = "Branch performance";
@@ -176,15 +249,17 @@
                     z.region?.forEach(r => {
                         r.branch?.forEach(b => {
                             if (filteredBranchId.includes(b._id.toString())) {
-                                branchMap[b._id] = b.name;
+                                branchMap[b._id.toString()] = b.name;
                             }
                         });
                     });
                 });
 
+                const branchIds = Object.keys(branchMap);
+
                 const leads = await Lead.find({
                     branch_id: {
-                        $in: Object.keys(branchMap)
+                        $in: branchIds
                     },
                     created_by: {
                         $in: userIds
@@ -199,8 +274,8 @@
                     grouped[id].push(l);
                 });
 
-                Object.keys(grouped).forEach(id => {
-                    const stats = calculateStats(grouped[id]);
+                branchIds.forEach(id => {
+                    const stats = calculateStats(grouped[id] || []);
 
                     finalZoneLead.push({
                         zoneName: branchMap[id],
@@ -224,11 +299,13 @@
                 zonesData.forEach(z => {
                     z.region?.forEach(r => {
                         if (filteredRegionId.includes(r._id.toString())) {
-                            const branchIds = (r.branch || []).map(b => b._id);
-                            regionMap[r._id] = {
+                            const branchIds = (r.branch || []).map(b => b._id.toString());
+
+                            regionMap[r._id.toString()] = {
                                 name: r.name,
                                 branchIds
                             };
+
                             allBranchIds.push(...branchIds);
                         }
                     });
@@ -244,8 +321,9 @@
                 });
 
                 Object.values(regionMap).forEach(region => {
+
                     const regionLeads = leads.filter(l =>
-                        region.branchIds.some(id => id.toString() === l.branch_id.toString())
+                        region.branchIds.includes(l.branch_id.toString())
                     );
 
                     const stats = calculateStats(regionLeads);
@@ -258,22 +336,24 @@
 
             } else if (filteredZoneId?.length > 0) {
 
+                finalFilterMessage = "Zone performance";
+
                 const zonesData = await Zone.find({
                     _id: {
                         $in: filteredZoneId
                     }
                 });
 
-                let allBranchIds = [];
                 const zoneMap = {};
+                let allBranchIds = [];
 
-                zonesData.forEach(z1 => {
-                    const branchIds = (z1.region || []).flatMap(r =>
-                        (r.branch || []).map(b => b._id)
+                zonesData.forEach(z => {
+                    const branchIds = (z.region || []).flatMap(r =>
+                        (r.branch || []).map(b => b._id.toString())
                     );
 
-                    zoneMap[z1._id] = {
-                        name: z1.name,
+                    zoneMap[z._id.toString()] = {
+                        name: z.name,
                         branchIds
                     };
 
@@ -290,8 +370,9 @@
                 });
 
                 Object.values(zoneMap).forEach(zone => {
+
                     const zoneLeads = leads.filter(l =>
-                        zone.branchIds.some(id => id.toString() === l.branch_id.toString())
+                        zone.branchIds.includes(l.branch_id.toString())
                     );
 
                     const stats = calculateStats(zoneLeads);
@@ -304,43 +385,138 @@
 
             } else {
 
-                let allBranchIds = [];
-                const zoneMap = {};
+                finalFilterMessage = "Zone performance";
 
-                zones.forEach(z1 => {
-                    const branchIds = (z1.region || []).flatMap(r =>
-                        (r.branch || []).map(b => b._id)
-                    );
+                if (
+                    level === "69d3a36f9e57cff228594aea" ||
+                    level === "69d75130d9daa00434648316"
+                ) {
 
-                    zoneMap[z1._id] = {
-                        name: z1.name,
-                        branchIds
-                    };
+                    const zoneMap = {};
+                    let allBranchIds = [];
 
-                    allBranchIds.push(...branchIds);
-                });
+                    zoneData.forEach(z => {
+                        const branchIds = (z.region || []).flatMap(r =>
+                            (r.branch || []).map(b => b._id.toString())
+                        );
 
-                const leads = await Lead.find({
-                    branch_id: {
-                        $in: allBranchIds
-                    },
-                    created_by: {
-                        $in: userIds
-                    }
-                });
+                        zoneMap[z._id.toString()] = {
+                            name: z.name,
+                            branchIds
+                        };
 
-                Object.values(zoneMap).forEach(zone => {
-                    const zoneLeads = leads.filter(l =>
-                        zone.branchIds.some(id => id.toString() === l.branch_id.toString())
-                    );
-
-                    const stats = calculateStats(zoneLeads);
-
-                    finalZoneLead.push({
-                        zoneName: zone.name,
-                        ...stats
+                        allBranchIds.push(...branchIds);
                     });
-                });
+
+                    const leads = await Lead.find({
+                        branch_id: {
+                            $in: allBranchIds
+                        },
+                        created_by: {
+                            $in: userIds
+                        }
+                    });
+
+                    Object.values(zoneMap).forEach(zone => {
+                        const zoneLeads = leads.filter(l =>
+                            zone.branchIds.includes(l.branch_id.toString())
+                        );
+
+                        const stats = calculateStats(zoneLeads);
+
+                        finalZoneLead.push({
+                            zoneName: zone.name,
+                            ...stats
+                        });
+                    });
+
+                } else if (level === "69d3a36f9e57cff228594aeb") {
+
+                    finalFilterMessage = "Region performance";
+
+                    const regionMap = {};
+                    let allBranchIds = [];
+
+                    // ✅ FIX: regionData structure
+                    regionData?.forEach(z => {
+                        (z.region || []).forEach(r => {
+
+                            const branchIds = (r.branch || []).map(b => b._id.toString());
+
+                            regionMap[r._id.toString()] = {
+                                name: r.name,
+                                branchIds
+                            };
+
+                            allBranchIds.push(...branchIds);
+                        });
+                    });
+
+                    const leads = await Lead.find({
+                        branch_id: {
+                            $in: allBranchIds
+                        },
+                        created_by: {
+                            $in: userIds
+                        }
+                    });
+
+                    Object.values(regionMap).forEach(region => {
+
+                        const regionLeads = leads.filter(l =>
+                            region.branchIds.includes(l.branch_id.toString())
+                        );
+
+                        const stats = calculateStats(regionLeads);
+
+                        finalZoneLead.push({
+                            zoneName: region.name,
+                            ...stats
+                        });
+                    });
+
+                } else {
+
+                    finalFilterMessage = "Branch performance";
+
+                    const branchMap = {};
+
+                    // ✅ FIX: branchData structure
+                    branchData.forEach(item => {
+                        (item.branch || []).forEach(b => {
+                            branchMap[b._id.toString()] = b.name;
+                        });
+                    });
+
+                    const branchIds = Object.keys(branchMap);
+
+                    const leads = await Lead.find({
+                        branch_id: {
+                            $in: branchIds
+                        },
+                        created_by: {
+                            $in: userIds
+                        }
+                    });
+
+                    const grouped = {};
+
+                    leads.forEach(l => {
+                        const id = l.branch_id.toString();
+                        if (!grouped[id]) grouped[id] = [];
+                        grouped[id].push(l);
+                    });
+
+                    branchIds.forEach(id => {
+                        const stats = calculateStats(grouped[id] || []);
+
+                        finalZoneLead.push({
+                            zoneName: branchMap[id],
+                            ...stats
+                        });
+                    });
+                }
+
             }
 
             // ================= MONTHLY =================
@@ -464,41 +640,6 @@
                     }
                 }
             ]);
-
-            let filter = {
-                created_by: headUserId
-            };
-
-            if (headUser.user_level_id.toString() == "69d3a36f9e57cff228594aea") {
-                filter._id = headUser.zone_id;
-
-            } else if (headUser.user_level_id.toString() == "69d3a36f9e57cff228594aeb") {
-
-                filter["region._id"] = headUser.region_id;
-            } else if (headUser.user_level_id.toString() == "69d75130d9daa00434648316") {
-
-                filter._id = headUser.zone_id;
-            } else {
-
-                filter["region.branch._id"] = headUser.branch_id;
-            }
-
-            const zoneData = await Zone.find(filter);
-
-            const regionData = zoneData.map(z => ({
-                zoneId: z._id,
-                region: z.region
-            }));
-
-            const branchData = regionData.flatMap(r => {
-
-                return (r.region || []).map(regionItem => ({
-
-                    zoneId: r.zoneId,
-                    regionId: regionItem._id,
-                    branch: regionItem.branch
-                }));
-            });
 
             // ================= FINAL =================
             const finalData = {
