@@ -469,17 +469,17 @@
                 created_by: headUserId
             };
 
-            if (headUser.user_level_id.toString() === "69d3a36f9e57cff228594aea") {
+            if (headUser.user_level_id.toString() == "69d3a36f9e57cff228594aea") {
                 filter._id = headUser.zone_id;
 
-            } else if (headUser.user_level_id.toString() === "69d3a36f9e57cff228594aeb") {
+            } else if (headUser.user_level_id.toString() == "69d3a36f9e57cff228594aeb") {
 
                 filter["region._id"] = headUser.region_id;
-            } else if (headUser.user_level_id.toString() === "69d75130d9daa00434648316") {
+            } else if (headUser.user_level_id.toString() == "69d75130d9daa00434648316") {
 
                 filter._id = headUser.zone_id;
             } else {
-                
+
                 filter["region.branch._id"] = headUser.branch_id;
             }
 
