@@ -6,11 +6,16 @@ const notificationSchema = new mongoose.Schema({
         required: true,
         maxlength: 100
     },
+    schedule_days: {
+        type: String,
+        required: true,
+        maxlength: 3
+    },
     notification_type: {
         type: String,
-        unique: true,
-        maxlength: 200,
-        required: true,
+        unique: false,
+        default: "null",
+        required: false,
     },
     subject: {
         type: String,
@@ -21,6 +26,11 @@ const notificationSchema = new mongoose.Schema({
         type: String,
         required: true,
         maxlength: 50000
+    },
+    created_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'users',
+        required: true
     },
     created_at: {
         type: Date,

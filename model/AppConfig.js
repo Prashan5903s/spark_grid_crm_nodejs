@@ -7,6 +7,12 @@ const appConfigSchema = new mongoose.Schema({
         required: true,
         maxlength: 100
     },
+    notification_template: [{
+        title: {
+            type: String,
+            required: true,
+        }
+    }],
     leads_status_data: [{
         title: {
             type: String,
