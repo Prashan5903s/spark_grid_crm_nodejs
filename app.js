@@ -11,7 +11,7 @@ const companyRouter = require('./route/company');
 const userRouter = require('./route/user');
 const scheduleNotificationCommand = require("./command/ScheduleNotification")
 
-// require('./worker/reportWorker')
+require('./util/cronSendMail');
 
 const path = require('path');
 const fs = require('fs');
@@ -77,7 +77,7 @@ app.use((error, req, res, next) => {
 // Start server
 mongoose.connect(MongoURL)
     .then(() => {
-        
+
         app.listen(port, () => console.log(`Server started on ${port}`));
 
     })
