@@ -117,7 +117,7 @@ router.get('/certificate/edit/:id', isAuth, certificateController.getEditCertifi
 router.post('/certificate/change/frame/:id', isAuth, certificateController.putChangeFrameAPI)
 
 //This route is for notification
-router.get('/notification', isAuth, notificationController.getNotificationDataAPI)
+router.get('/notification/data', isAuth, notificationController.getNotificationDataAPI)
 router.get('/notification/create', isAuth, notificationController.getCreateNotificationAPI)
 router.post('/notification', isAuth, uploadNotificationFiles, notificationController.postNotificationDataAPI)
 router.get('/notification/edit/:id', isAuth, notificationController.getEditNotificationAPI);

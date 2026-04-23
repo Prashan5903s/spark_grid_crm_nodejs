@@ -27,6 +27,11 @@ const notificationSchema = new mongoose.Schema({
         required: true,
         maxlength: 50000
     },
+    default_select: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
     created_by: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'users',

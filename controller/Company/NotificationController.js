@@ -1,4 +1,5 @@
 const notification = require('../../model/Notifications')
+const notificationLog = require("../../model/NotificationLog")
 const AppConfig = require('../../model/AppConfig')
 const {
     errorResponse,
@@ -35,35 +36,103 @@ exports.getCreateNotificationAPI = async (req, res, next) => {
 
 exports.getNotificationDataAPI = async (req, res, next) => {
     try {
+        const fixedUserId = "6811ae35704460d978b84eaa";
         const userId = req.userId;
 
-        const Notifications = await notification.aggregate([{
+        const finalUserIds = [
+            mongoose.Types.ObjectId.createFromHexString(fixedUserId),
+            mongoose.Types.ObjectId.createFromHexString(userId)
+        ];
+
+        const notifications = await notification.aggregate([{
                 $match: {
-                    created_by: mongoose.Types.ObjectId.createFromHexString(userId)
+                    created_by: {
+                        $in: finalUserIds
+                    }
                 }
             },
+
+            // check notification_log for current user
+            {
+                $lookup: {
+                    from: "notification_log",
+                    let: {
+                        notificationId: "$_id"
+                    },
+                    pipeline: [{
+                        $match: {
+                            $expr: {
+                                $and: [{
+                                        $eq: [
+                                            "$notification_id",
+                                            "$$notificationId"
+                                        ]
+                                    },
+                                    {
+                                        $eq: [
+                                            "$created_by",
+                                            mongoose.Types.ObjectId.createFromHexString(userId)
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }],
+                    as: "logData"
+                }
+            },
+
+            {
+                $addFields: {
+                    logData: {
+                        $arrayElemAt: ["$logData", 0]
+                    }
+                }
+            },
+
+            // Replace original fields with log fields if log exists
             {
                 $project: {
-                    template_name: 1,
-                    subject: 1,
-                    message: 1,
-                    default_select: true,
-                    schedule_days: 1,
-                    created_by: 1,
-                    created_at: 1,
-                    updated_at: 1,
+                    template_name: {
+                        $ifNull: ["$logData.template_name", "$template_name"]
+                    },
+                    subject: {
+                        $ifNull: ["$logData.subject", "$subject"]
+                    },
+                    message: {
+                        $ifNull: ["$logData.message", "$message"]
+                    },
+                    schedule_days: {
+                        $ifNull: ["$logData.schedule_days", "$schedule_days"]
+                    },
+                    default_select: {
+                        $ifNull: ["$logData.default_select", "$default_select"]
+                    },
+                    created_by: {
+                        $ifNull: ["$logData.created_by", "$created_by"]
+                    },
+                    created_at: {
+                        $ifNull: ["$logData.created_at", "$created_at"]
+                    },
+                    updated_at: {
+                        $ifNull: ["$logData.updated_at", "$updated_at"]
+                    },
+                    notification_id: "$_id"
                 }
             }
         ]);
 
-        if (!Notifications) {
+        if (!notifications || notifications.length === 0) {
             return errorResponse(res, "No notifications found", {}, 404);
         }
 
-        return successResponse(res, "Notification data fetched successfully", Notifications);
-
+        return successResponse(
+            res,
+            "Notification data fetched successfully",
+            notifications
+        );
     } catch (err) {
-        next(err)
+        next(err);
     }
 };
 
@@ -375,65 +444,49 @@ exports.updateNotificationAPI = async (req, res, next) => {
 
 exports.getCheckSelectNotificationAPI = async (req, res, next) => {
     try {
-        const id = req.params.id;
-        const userId = req.userId;
+
+        const id = mongoose.Types.ObjectId.createFromHexString(req.params.id);
+        const userId = mongoose.Types.ObjectId.createFromHexString(req.userId);
 
         const {
             template_name,
-            notification_type,
-            category_type,
             subject,
             message,
-            show_footer_logo,
-            header_logo_align,
-            footer_logo_align,
-            header_logo,
-            footer_logo,
-            footer,
+            schedule_days,
             default_select
         } = req.body
 
         const updateData = {
             template_name,
-            notification_type,
-            category_type,
-            show_footer_logo,
-            header_logo_align,
-            footer_logo_align,
+            notification_id: id,
             subject,
             message,
-            footer,
-            header_logo,
-            footer_logo,
+            schedule_days,
             default_select,
             created_by: userId
         }
 
-        const existNotification = await notification.findOne({
-            _id: id,
-            'user_input.created_by': userId
+        const existNotification = await notificationLog.findOne({
+            notification_id: id,
+            created_by: userId
         })
 
         if (existNotification) {
 
-            await notification.updateOne({
-                _id: id,
-                'user_input.created_by': userId
+            await notificationLog.findOneAndUpdate({
+                notification_id: id,
+                created_by: userId
             }, {
-                $set: {
-                    'user_input.$.subject': updateData.subject,
-                    'user_input.$.message': updateData.message,
-                    'user_input.$.footer': updateData.footer,
-                    'user_input.$.default_select': updateData.default_select,
-                    'user_input.$.header_logo_align': updateData.header_logo_align,
-                    'user_input.$.show_footer_logo': updateData.show_footer_logo,
-                    'user_input.$.header_logo': updateData.header_logo,
-                    'user_input.$.footer_logo': updateData.footer_logo,
-                    'user_input.$.footer_logo_align': updateData.footer_logo_align,
-                    'user_input.$.created_by': userId
-                }
-            })
+                $set: updateData
+            }, {
+                new: true
+            });
 
+        } else {
+
+
+            const notification_log = new notificationLog(updateData)
+            await notification_log.save();
         }
 
         return successResponse(res, "Notification updated successfully")
