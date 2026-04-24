@@ -11,8 +11,9 @@ const companyRouter = require('./route/company');
 const userRouter = require('./route/user');
 const scheduleNotificationCommand = require("./command/ScheduleNotification")
 
-// This is for email
-require('./util/cronSendMail');
+const sendEmail = require('./util/cronSendMail');
+
+sendEmail();
 
 const path = require('path');
 const fs = require('fs');
