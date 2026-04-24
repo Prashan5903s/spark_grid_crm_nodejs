@@ -11,7 +11,8 @@ const companyRouter = require('./route/company');
 const userRouter = require('./route/user');
 const scheduleNotificationCommand = require("./command/ScheduleNotification")
 
-// require('./util/cronSendMail');
+// This is for email
+require('./util/cronSendMail');
 
 const path = require('path');
 const fs = require('fs');
@@ -30,6 +31,7 @@ const imageDir = path.join(publicDir, 'company_logo');
 
 // Ensure /public/company_logo folder exists
 if (!fs.existsSync(imageDir)) {
+
     fs.mkdirSync(imageDir, {
         recursive: true
     });
