@@ -73,9 +73,9 @@ app.use((error, req, res, next) => {
     });
 });
 
-const sendEmail = require('./util/cronSendMail');
+// const sendEmail = require('./util/cronSendMail');
 
-sendEmail();
+// sendEmail();
 
 // Start server
 mongoose.connect(MongoURL)
