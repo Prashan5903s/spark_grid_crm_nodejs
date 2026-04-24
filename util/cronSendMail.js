@@ -1,5 +1,4 @@
 const SibApiV3Sdk = require('sib-api-v3-sdk');
-require('dotenv').config();
 
 const client = SibApiV3Sdk.ApiClient.instance;
 const apiKey = client.authentications['api-key'];

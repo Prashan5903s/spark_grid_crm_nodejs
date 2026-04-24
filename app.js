@@ -11,10 +11,6 @@ const companyRouter = require('./route/company');
 const userRouter = require('./route/user');
 const scheduleNotificationCommand = require("./command/ScheduleNotification")
 
-const sendEmail = require('./util/cronSendMail');
-
-sendEmail();
-
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
@@ -76,6 +72,10 @@ app.use((error, req, res, next) => {
         message: error.message || 'Internal Server Error'
     });
 });
+
+const sendEmail = require('./util/cronSendMail');
+
+sendEmail();
 
 // Start server
 mongoose.connect(MongoURL)
