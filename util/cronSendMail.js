@@ -4,6 +4,8 @@ require('dotenv').config();
 const client = SibApiV3Sdk.ApiClient.instance;
 const apiKey = client.authentications['api-key'];
 
+log('Brevo API Key:', process.env.BREVO_API_KEY);
+
 apiKey.apiKey = process.env.BREVO_API_KEY;
 
 const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
