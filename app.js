@@ -75,17 +75,17 @@ app.use((error, req, res, next) => {
     });
 });
 
-cron.schedule("*/1 10-18 * * 1-6", async () => {
-    
-    console.log("Running email cron...");
+// cron.schedule("*/1 10-18 * * 1-6", async () => {
 
-    try {
-        await sendEmail();
-        console.log("Email cron completed successfully");
-    } catch (error) {
-        console.error("Email cron failed:", error);
-    }
-});
+//     console.log("Running email cron...");
+
+//     try {
+//         await sendEmail();
+//         console.log("Email cron completed successfully");
+//     } catch (error) {
+//         console.error("Email cron failed:", error);
+//     }
+// });
 
 // Start server
 mongoose.connect(MongoURL)
