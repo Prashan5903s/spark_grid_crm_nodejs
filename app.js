@@ -11,6 +11,8 @@ const companyRouter = require('./route/company');
 const userRouter = require('./route/user');
 const scheduleNotificationCommand = require("./command/ScheduleNotification")
 
+const sendEmail = require('./util/cronTemplateReplace');
+
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
@@ -73,9 +75,16 @@ app.use((error, req, res, next) => {
     });
 });
 
-// const sendEmail = require('./util/cronSendMail');
+cron.schedule("*/1 10-18 * * 1-6", async () => {
+    console.log("Running email cron...");
 
-// sendEmail();
+    try {
+        await sendEmail();
+        console.log("Email cron completed successfully");
+    } catch (error) {
+        console.error("Email cron failed:", error);
+    }
+});
 
 // Start server
 mongoose.connect(MongoURL)
