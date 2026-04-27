@@ -313,14 +313,13 @@ async function processFollowUps(
                 )
             ) {
 
-//THis is code
-
+                //THis is code
 
                 await sendMail({
                     notificationId,
                     senderId,
                     name: leadName,
-                    email: "prashantchaubey1806@gmail.com",
+                    email: "ajaykumar@dreamweaversindia.com",
                     subject: notifSubject,
                     message: notifMessage,
                     notification,
