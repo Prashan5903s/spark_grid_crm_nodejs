@@ -386,16 +386,13 @@ async function processFollowUps(
                 senderId,
                 followUpId,
                 leadId,
-                email: "ajaykumar@dreamweaversindia.com",
+                email: leadEmail,
                 name: formatLeadName(
                     leadName
                 ),
                 subject: notification.subject,
                 message: finalTemplateLayout
             });
-
-            break;
-
         }
     }
 }
