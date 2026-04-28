@@ -12,7 +12,9 @@ const sendEmail = async ({
     toEmail,
     toName,
     subject,
-    htmlContent
+    htmlContent,
+    bcc = [],
+    cc = []
 }) => {
     try {
         const emailData = {
@@ -20,13 +22,29 @@ const sendEmail = async ({
                 email: "info@crm.sparkgrid.co.in",
                 name: "Spark Grid"
             },
+
             to: [{
                 email: toEmail,
                 name: toName
             }],
+
             subject,
             htmlContent
         };
+
+        // Add CC only if provided
+        if (cc.length) {
+            emailData.cc = cc.map((email) => ({
+                email
+            }));
+        }
+
+        // Add BCC only if provided
+        if (bcc.length) {
+            emailData.bcc = bcc.map((email) => ({
+                email
+            }));
+        }
 
         const response =
             await apiInstance.sendTransacEmail(
@@ -40,13 +58,12 @@ const sendEmail = async ({
 
         return response;
     } catch (error) {
-
         console.error(
             "Error sending email:",
             error.response?.body ||
             error.message
         );
-        
+
         throw error;
     }
 };
