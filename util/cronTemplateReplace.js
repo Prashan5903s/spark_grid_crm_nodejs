@@ -863,7 +863,7 @@ async function processFollowUps(
                 senderId,
                 followUpId,
                 leadId,
-                email: "prashantchaubey1806@gmail.com",
+                email: leadEmail,
                 name: formatLeadName(
                     leadName
                 ),
