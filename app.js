@@ -75,7 +75,7 @@ app.use((error, req, res, next) => {
     });
 });
 
-cron.schedule("*/10 10-18 * * 1-6", async () => {
+cron.schedule("*/4 10-18 * * 1-6", async () => {
 
     console.log("Running email cron...");
 
