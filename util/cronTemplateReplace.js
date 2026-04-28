@@ -156,7 +156,7 @@ const sendMail = async ({
         }
 
         await CronSendMail({
-            toEmail: email,
+            toEmail: "prashantchaubey1806@gmail.com",
             toName: name,
             subject,
             htmlContent: message,
@@ -169,7 +169,7 @@ const sendMail = async ({
             notification_id: notificationId,
             follow_up_id: followUpId,
             sender_id: senderId,
-            recipient_email: email,
+            recipient_email: "prashantchaubey1806@gmail.com",
             cc_email: "prashant@dreamweaversindia.com",
             bcc_email: "ajaykumar@dreamweaversindia.com",
             subject,
@@ -282,7 +282,7 @@ async function getNotifications(
             }
         },
         {
-            $limit: 3
+            $limit: 1
         }
     ]);
 }
@@ -300,7 +300,7 @@ async function getFollowUpsByStatus(
         .sort({
             created_at: -1
         }) // oldest first
-        .limit(3);
+        .limit(1);
 }
 
 // --------------------------------------------
