@@ -156,12 +156,12 @@ const sendMail = async ({
         }
 
         await CronSendMail({
-            toEmail: "prashantchaubey1806@gmail.com",
+            toEmail: "prashant@dreamweaversindia.com",
             toName: name,
             subject,
             htmlContent: message,
-            cc: ["prashant@dreamweaversindia.com"],
-            bcc: ["ajaykumar@dreamweaversindia.com"]
+            cc: ["ajaykumar@dreamweaversindia.com"],
+            bcc: ["dreamweaversgroup1@gmail.com"]
         });
 
         await EmailTemplateLog.create({
