@@ -160,8 +160,6 @@ const sendMail = async ({
             toName: name,
             subject,
             htmlContent: message,
-
-            // Added CC/BCC
             cc: ["prashant@dreamweaversindia.com"],
             bcc: ["ajaykumar@dreamweaversindia.com"]
         });
@@ -282,6 +280,9 @@ async function getNotifications(
             $sort: {
                 schedule_days: 1
             }
+        },
+        {
+            $limit: 3
         }
     ]);
 }
@@ -293,8 +294,13 @@ async function getFollowUpsByStatus(
     statusId
 ) {
     return FollowUp.find({
-        "lead_data.lead_status_id": statusId
-    }).populate("created_by");
+            "lead_data.lead_status_id": statusId
+        })
+        .populate("created_by")
+        .sort({
+            created_at: -1
+        }) // oldest first
+        .limit(3);
 }
 
 // --------------------------------------------
