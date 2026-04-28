@@ -35,7 +35,7 @@ const emailTemplateLogSchema = new Schema({
     },
     message: {
         type: String,
-        maxlength: 6555, // Maximum length for LONGTEXT
+        maxlength: 655555, // Maximum length for LONGTEXT
         required: true, // body is required
     },
     sender_date: {
