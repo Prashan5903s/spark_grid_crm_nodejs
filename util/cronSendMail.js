@@ -18,7 +18,7 @@ const sendEmail = async ({
         const emailData = {
             sender: {
                 email: "info@crm.sparkgrid.co.in",
-                name: "CRM SparkGrid"
+                name: "Spark Grid"
             },
             to: [{
                 email: toEmail,
