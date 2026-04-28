@@ -7,6 +7,11 @@ const appConfigSchema = new mongoose.Schema({
         required: true,
         maxlength: 100
     },
+    default_html_layout: {
+        type: String,
+        required: false,
+        maxlength: 60000
+    },
     notification_template: [{
         title: {
             type: String,

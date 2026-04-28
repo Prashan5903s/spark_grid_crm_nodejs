@@ -1,9 +1,10 @@
 const mongoose = require("mongoose");
 
+const AppConfig = require("../model/AppConfig");
 const FollowUp = require("../model/FollowUp");
-const CronSendMail = require('./cronSendMail')
+const CronSendMail = require("./cronSendMail");
 const Notification = require("../model/Notifications");
-const EmailTemplateLog = require("../model/EmailTemplateLog")
+const EmailTemplateLog = require("../model/EmailTemplateLog");
 
 // --------------------------------------------
 // Notification IDs
@@ -28,6 +29,9 @@ const customerContactedId = [
     "69e8a21c60f4e0f3d5385def"
 ];
 
+// --------------------------------------------
+// Convert string ids to ObjectIds
+// --------------------------------------------
 const convertToObjectIds = (ids = []) => {
     return ids
         .filter((id) => mongoose.Types.ObjectId.isValid(id))
@@ -36,29 +40,27 @@ const convertToObjectIds = (ids = []) => {
         );
 };
 
+// --------------------------------------------
+// Normalize schedule days
+// --------------------------------------------
 const normalizeScheduleDays = (scheduleDays) => {
-
     if (!scheduleDays) {
         return [];
     }
 
-    // If already array -> convert strings to numbers
     if (Array.isArray(scheduleDays)) {
         return scheduleDays
             .map((day) => parseInt(day, 10))
             .filter((day) => !isNaN(day));
     }
 
-    // If string like "1,2,3"
     if (typeof scheduleDays === "string") {
-
         return scheduleDays
             .split(",")
             .map((day) => parseInt(day.trim(), 10))
             .filter((day) => !isNaN(day));
     }
 
-    // Single value
     if (
         typeof scheduleDays === "number" ||
         !isNaN(scheduleDays)
@@ -69,14 +71,16 @@ const normalizeScheduleDays = (scheduleDays) => {
     return [];
 };
 
-const isScheduledForToday = (
+// --------------------------------------------
+// Check if notification should be sent today
+// or was missed earlier
+// --------------------------------------------
+const isScheduledOrMissed = (
     followUpTime,
     scheduleDays = []
 ) => {
     const today = new Date();
-
-    // Remove time portion from today
-    today.setHours(0, 0, 0, 0);
+    today.setHours(23, 59, 59, 999);
 
     const normalizedDays =
         normalizeScheduleDays(scheduleDays);
@@ -86,64 +90,71 @@ const isScheduledForToday = (
     }
 
     return normalizedDays.some((day) => {
-        const scheduledDate = new Date(followUpTime);
+        const scheduledDate = new Date(
+            followUpTime
+        );
 
-        // Add schedule day offset
         scheduledDate.setDate(
             scheduledDate.getDate() + day
         );
 
-        // Remove time portion
         scheduledDate.setHours(
-            0,
-            0,
-            0,
-            0
+            23,
+            59,
+            59,
+            999
         );
 
         return (
-            scheduledDate.getTime() ===
+            scheduledDate.getTime() <=
             today.getTime()
         );
     });
 };
 
+// --------------------------------------------
+// Format name
+// --------------------------------------------
+const formatLeadName = (leadName = "") => {
+    return leadName
+        .toLowerCase()
+        .split(" ")
+        .filter(Boolean)
+        .map(
+            (word) =>
+            word.charAt(0).toUpperCase() +
+            word.slice(1)
+        )
+        .join(" ");
+};
+
+// --------------------------------------------
+// Send mail
+// --------------------------------------------
 const sendMail = async ({
     email,
     name,
     senderId,
     notificationId,
-    notification,
     followUpId,
     leadId,
     subject,
     message
 }) => {
     try {
-
-        // Start of today
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-
-        // End of today
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
-
-        // Check if mail already sent today
-        const existingLog = await EmailTemplateLog.findOne({
-            lead_id: leadId,
-            sender_id: senderId,
-            notification_id: notificationId,
-            follow_up_id: followUpId,
-            recipient_email: email,
-            sender_date: {
-                $gte: startOfDay,
-                $lte: endOfDay
-            }
-        });
+        const existingLog =
+            await EmailTemplateLog.findOne({
+                lead_id: leadId,
+                sender_id: senderId,
+                notification_id: notificationId,
+                follow_up_id: followUpId,
+                recipient_email: email
+            });
 
         if (existingLog) {
-
+            console.log(
+                `Mail already sent to ${email}`
+            );
             return;
         }
 
@@ -152,9 +163,8 @@ const sendMail = async ({
             toName: name,
             subject,
             htmlContent: message
-        })
+        });
 
-        // Save email log after successful send
         await EmailTemplateLog.create({
             lead_id: leadId,
             notification_id: notificationId,
@@ -166,12 +176,23 @@ const sendMail = async ({
             sender_date: new Date()
         });
 
+        console.log(
+            `Mail sent successfully to ${email}`
+        );
     } catch (error) {
-        console.error("Mail error:", error);
+        console.error(
+            "Mail sending error:",
+            error
+        );
     }
 };
 
-async function getNotifications(notificationIds) {
+// --------------------------------------------
+// Get notifications
+// --------------------------------------------
+async function getNotifications(
+    notificationIds
+) {
     const objectIds =
         convertToObjectIds(notificationIds);
 
@@ -254,12 +275,20 @@ async function getNotifications(notificationIds) {
     ]);
 }
 
-async function getFollowUpsByStatus(statusId) {
+// --------------------------------------------
+// Get followups by status
+// --------------------------------------------
+async function getFollowUpsByStatus(
+    statusId
+) {
     return FollowUp.find({
         "lead_data.lead_status_id": statusId
     }).populate("created_by");
 }
 
+// --------------------------------------------
+// Process followups
+// --------------------------------------------
 async function processFollowUps(
     followUps,
     notifications
@@ -268,75 +297,111 @@ async function processFollowUps(
         !followUps.length ||
         !notifications.length
     ) {
-
-        console.log("Follow up and notification length 0")
+        console.log(
+            "Followups or notifications missing"
+        );
         return;
     }
 
+    const templateData =
+        await AppConfig.findOne({
+            type: "default_html_layout"
+        });
+
     for (const followUp of followUps) {
+        const followUpTime =
+            followUp.created_at;
+        const followUpId =
+            followUp._id;
 
-        const followUpTime = followUp.created_at;
-        const followUpId = followUp._id;
+        const leadId =
+            followUp.lead_id;
+        const leadEmail =
+            followUp?.lead_data?.email;
+        const leadName =
+            followUp?.lead_data?.name;
 
-        const leadId = followUp.lead_id;
-        const leadEmail = followUp?.lead_data?.email;
-        const leadName = followUp?.lead_data?.name;
+        const senderId =
+            followUp?.created_by?._id;
 
-        const senderId = followUp?.created_by?._id;
-
-        const senderName = `${followUp?.created_by?.first_name} ${followUp?.created_by?.last_name}`
+        const senderName = `${followUp?.created_by?.first_name || ""
+            } ${followUp?.created_by?.last_name || ""
+            }`;
 
         if (!leadEmail) {
-
-            console.log("Email not found")
+            console.log(
+                `No email found for lead ${leadId}`
+            );
             continue;
         }
 
         for (const notification of notifications) {
+            const notificationId =
+                notification.notification_id;
 
-            const notificationId = notification?._id;
+            const scheduleDays =
+                notification.schedule_days;
 
-            const scheduleDays = notification.schedule_days;
-
-            let notifMessage = notification?.message || "";
-
-            notifMessage = notifMessage
-                .replace(/{{client_name}}/g, leadName)
-                .replace(/{{sender_name}}/g, senderName);
-
-            const notifSubject = notification?.subject;
-
-            if (
-                isScheduledForToday(
+            const shouldSend =
+                isScheduledOrMissed(
                     followUpTime,
                     scheduleDays
-                )
-            ) {
+                );
 
-                //THis is code
-
-                await sendMail({
-                    notificationId,
-                    senderId,
-                    name: leadName,
-                    email: "ajaykumar@dreamweaversindia.com",
-                    subject: notifSubject,
-                    message: notifMessage,
-                    notification,
-                    followUpId,
-                    leadId
-                });
+            if (!shouldSend) {
+                continue;
             }
+
+            let notifMessage =
+                notification.message || "";
+
+            notifMessage =
+                notifMessage
+                .replace(
+                    /{{client_name}}/g,
+                    formatLeadName(
+                        leadName
+                    )
+                )
+                .replace(
+                    /{{sender_name}}/g,
+                    formatLeadName(
+                        senderName
+                    )
+                );
+
+            const finalTemplateLayout =
+                templateData?.default_html_layout
+                ?.replace(
+                    /{{{mainMessage}}}/g,
+                    notifMessage
+                )
+                ?.replace(
+                    /{{currentYear}}/g,
+                    new Date().getFullYear()
+                );
+
+            await sendMail({
+                notificationId,
+                senderId,
+                followUpId,
+                leadId,
+                email: "prashantchaubey1806@gmail.com",
+                name: formatLeadName(
+                    leadName
+                ),
+                subject: notification.subject,
+                message: finalTemplateLayout
+            });
         }
     }
 }
 
 // --------------------------------------------
-// Main cron function
+// Main cron
 // --------------------------------------------
 async function cronTemplateReplace() {
     try {
-
         const [
             notificationLeadGen,
             notificationCallNotPick,
@@ -345,7 +410,6 @@ async function cronTemplateReplace() {
             followUpContactAttempted,
             followUpContacted
         ] = await Promise.all([
-
             getNotifications(
                 LeadGenerationId
             ),
@@ -382,6 +446,9 @@ async function cronTemplateReplace() {
             notificationContacted
         );
 
+        console.log(
+            "Cron completed successfully"
+        );
     } catch (error) {
         console.error(
             "Cron template error:",
