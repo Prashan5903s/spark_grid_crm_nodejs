@@ -76,7 +76,7 @@ app.use((error, req, res, next) => {
 });
 
 cron.schedule(
-    "* 10-18 * * 1-6",
+    "2 10-18 * * 1-6",
     async () => {
         console.log("Running email cron...");
 
