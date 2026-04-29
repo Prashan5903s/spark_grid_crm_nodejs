@@ -212,6 +212,12 @@ exports.putUpdateNotificationAPI = async (req, res, next) => {
             default_select
         }
 
+        await notificationLog.updateMany({
+            notification_id: id
+        }, {
+            $set: updateData
+        });
+
         await notification.findOneAndUpdate({
             created_by: userId,
             _id: id
