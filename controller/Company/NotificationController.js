@@ -448,13 +448,12 @@ exports.getCheckSelectNotificationAPI = async (req, res, next) => {
         const id = mongoose.Types.ObjectId.createFromHexString(req.params.id);
         const userId = mongoose.Types.ObjectId.createFromHexString(req.userId);
 
-        const {
-            template_name,
-            subject,
-            message,
-            schedule_days,
-            default_select
-        } = req.body
+        const notificationExist = await notification.findById(id);
+        const template_name = notificationExist?.template_name;
+        const subject = notificationExist?.subject;
+        const message = notificationExist?.message;
+        const schedule_days = notificationExist?.schedule_days;
+        const default_select = notificationExist?.default_select;
 
         const updateData = {
             template_name,
