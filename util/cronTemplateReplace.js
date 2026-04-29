@@ -1,14 +1,11 @@
 const mongoose = require("mongoose");
 
-const AppConfig = require("../model/AppConfig");
 const FollowUp = require("../model/FollowUp");
+const AppConfig = require("../model/AppConfig");
 const CronSendMail = require("./cronSendMail");
 const Notification = require("../model/Notifications");
 const EmailTemplateLog = require("../model/EmailTemplateLog");
 
-// --------------------------------------------
-// Notification IDs
-// --------------------------------------------
 const LeadGenerationId = [
     "69e893b70a6495d10414f923",
     "69e8977b282b1b6c8f5671b5",
@@ -29,10 +26,8 @@ const customerContactedId = [
     "69e8a21c60f4e0f3d5385def"
 ];
 
-// --------------------------------------------
-// Convert string ids to ObjectIds
-// --------------------------------------------
 const convertToObjectIds = (ids = []) => {
+
     return ids
         .filter((id) => mongoose.Types.ObjectId.isValid(id))
         .map((id) =>
@@ -40,10 +35,8 @@ const convertToObjectIds = (ids = []) => {
         );
 };
 
-// --------------------------------------------
-// Normalize schedule days
-// --------------------------------------------
 const normalizeScheduleDays = (scheduleDays) => {
+
     if (!scheduleDays) return [];
 
     if (Array.isArray(scheduleDays)) {
@@ -69,9 +62,6 @@ const normalizeScheduleDays = (scheduleDays) => {
     return [];
 };
 
-// --------------------------------------------
-// Check if notification should be sent
-// --------------------------------------------
 const isScheduledOrMissed = (
     followUpTime,
     scheduleDays = []
@@ -109,10 +99,8 @@ const isScheduledOrMissed = (
     });
 };
 
-// --------------------------------------------
-// Format name
-// --------------------------------------------
 const formatLeadName = (leadName = "") => {
+
     return leadName
         .toLowerCase()
         .split(" ")
@@ -125,9 +113,6 @@ const formatLeadName = (leadName = "") => {
         .join(" ");
 };
 
-// --------------------------------------------
-// Send mail
-// --------------------------------------------
 const sendMail = async ({
     email,
     name,
@@ -139,29 +124,26 @@ const sendMail = async ({
     message
 }) => {
     try {
-        const existingLog =
-            await EmailTemplateLog.findOne({
-                lead_id: leadId,
-                sender_id: senderId,
-                notification_id: notificationId,
-                follow_up_id: followUpId,
-                recipient_email: email
-            });
+
+        const existingLog = await EmailTemplateLog.findOne({
+            lead_id: leadId,
+            sender_id: senderId,
+            notification_id: notificationId,
+            follow_up_id: followUpId,
+        });
 
         if (existingLog) {
-            console.log(
-                `Mail already sent to ${email}`
-            );
+
             return false;
         }
 
         await CronSendMail({
-            toEmail: "ajaykumar@dreamweaversindia.com",
+            toEmail: email,
             toName: name,
             subject,
             htmlContent: message,
             cc: [],
-            bcc: ["prashant@dreamweaversindia.com"]
+            bcc: ["prashant@dreamweaversindia.com", "ajaykumar@dreamweaversindia.com"]
         });
 
         await EmailTemplateLog.create({
@@ -169,15 +151,11 @@ const sendMail = async ({
             notification_id: notificationId,
             follow_up_id: followUpId,
             sender_id: senderId,
-            recipient_email: "ajaykumar@dreamweaversindia.com",
+            recipient_email: email,
             subject,
             message,
             sender_date: new Date()
         });
-
-        console.log(
-            `Mail sent successfully to ${email}`
-        );
 
         return true;
     } catch (error) {
@@ -189,9 +167,6 @@ const sendMail = async ({
     }
 };
 
-// --------------------------------------------
-// Get notifications
-// --------------------------------------------
 async function getNotifications(
     notificationIds
 ) {
@@ -279,9 +254,6 @@ async function getNotifications(
                 schedule_days: 1
             }
         },
-        {
-            $limit: 1
-        }
     ]);
 }
 
@@ -297,8 +269,7 @@ async function getFollowUpsByStatus(
         .populate("created_by")
         .sort({
             created_at: -1
-        }) // oldest first
-        .limit(1);
+        });
 }
 
 // --------------------------------------------
