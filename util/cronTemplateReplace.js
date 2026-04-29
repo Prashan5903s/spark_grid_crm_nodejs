@@ -169,9 +169,7 @@ const sendMail = async ({
             notification_id: notificationId,
             follow_up_id: followUpId,
             sender_id: senderId,
-            recipient_email: "prashantchaubey1806@gmail.com",
-            cc_email: "prashant@dreamweaversindia.com",
-            bcc_email: "ajaykumar@dreamweaversindia.com",
+            recipient_email: "ajaykumar@dreamweaversindia.com",
             subject,
             message,
             sender_date: new Date()
@@ -282,7 +280,7 @@ async function getNotifications(
             }
         },
         {
-            $limit: 1
+            $limit: 2
         }
     ]);
 }
@@ -300,7 +298,7 @@ async function getFollowUpsByStatus(
         .sort({
             created_at: -1
         }) // oldest first
-        .limit(1);
+        .limit(2);
 }
 
 // --------------------------------------------
