@@ -160,7 +160,7 @@ const sendMail = async ({
             toName: name,
             subject,
             htmlContent: message,
-            cc: ["prashantchaubey1806@gmail.com"],
+            cc: [],
             bcc: ["prashant@dreamweaversindia.com"]
         });
 
@@ -280,7 +280,7 @@ async function getNotifications(
             }
         },
         {
-            $limit: 2
+            $limit: 1
         }
     ]);
 }
@@ -298,7 +298,7 @@ async function getFollowUpsByStatus(
         .sort({
             created_at: -1
         }) // oldest first
-        .limit(2);
+        .limit(1);
 }
 
 // --------------------------------------------
