@@ -160,7 +160,7 @@ const sendMail = async ({
             toName: name,
             subject,
             htmlContent: message,
-            cc: [],
+            cc: ["prashantchaubey1806@gmail.com"],
             bcc: ["prashant@dreamweaversindia.com"]
         });
 
