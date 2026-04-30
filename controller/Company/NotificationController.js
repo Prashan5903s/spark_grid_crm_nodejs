@@ -1,11 +1,14 @@
+const User = require("../../model/User")
+const mongoose = require('mongoose')
 const notification = require('../../model/Notifications')
 const notificationLog = require("../../model/NotificationLog")
+const EmailTemplateLog = require("../../model/EmailTemplateLog")
 const AppConfig = require('../../model/AppConfig')
 const {
     errorResponse,
     successResponse
 } = require('../../util/response')
-const mongoose = require('mongoose');
+
 
 exports.getCreateNotificationAPI = async (req, res, next) => {
     try {
@@ -505,3 +508,116 @@ exports.getCheckSelectNotificationAPI = async (req, res, next) => {
     }
 
 }
+
+exports.getTemplateLogFetch = async (req, res, next) => {
+    try {
+        const userId = req?.userId;
+
+        const users = await User.find({
+            created_by: userId
+        });
+
+        // No conversion needed
+        const userIds = users.map(u => u._id);
+
+        const emailTemplateLog = await EmailTemplateLog.aggregate([{
+                $match: {
+                    sender_id: {
+                        $in: userIds
+                    }
+                }
+            },
+
+            // Join leads
+            {
+                $lookup: {
+                    from: "leads",
+                    localField: "lead_id",
+                    foreignField: "_id",
+                    as: "lead"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$lead",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+
+            // Join follow_up
+            {
+                $lookup: {
+                    from: "follow_ups",
+                    localField: "follow_up_id",
+                    foreignField: "_id",
+                    as: "follow_up"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$follow_up",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+
+            // Join sender (users)
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "sender_id",
+                    foreignField: "_id",
+                    as: "sender"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$sender",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+
+            // 🔥 Join notification_template
+            {
+                $lookup: {
+                    from: "notification_template", // confirm your collection name
+                    localField: "notification_id",
+                    foreignField: "_id",
+                    as: "notification_template"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$notification_template",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+
+            // Group by date
+            {
+                $group: {
+                    _id: {
+                        $dateToString: {
+                            format: "%d %B %Y",
+                            date: "$sender_date"
+                        }
+                    },
+                    data: {
+                        $push: "$$ROOT"
+                    }
+                }
+            },
+
+            // Sort latest first
+            {
+                $sort: {
+                    _id: -1
+                }
+            }
+        ]);
+
+        return successResponse(res, "Data fetched successfully", emailTemplateLog);
+
+    } catch (error) {
+        next(error);
+    }
+};

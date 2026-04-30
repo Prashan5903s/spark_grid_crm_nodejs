@@ -126,6 +126,9 @@ router.get('/notification/form/:id', isAuth, notificationController.getFormNotif
 router.put('/notification/form/update/:id', isAuth, uploadNotificationFiles, notificationController.updateNotificationAPI)
 router.put("/notification/check/select/:id", isAuth, notificationController.getCheckSelectNotificationAPI)
 
+//This route is for template
+router.get("/template/log/data", isAuth, notificationController.getTemplateLogFetch);
+
 //This is the route for module survey setting
 router.get('/module/survey/setting/:moduleId', isAuth, surveySettingController.getSurveySettingAPI);
 router.post('/module/survey/setting/:moduleId', isAuth, surveySettingController.postSurveySettingAPI);
