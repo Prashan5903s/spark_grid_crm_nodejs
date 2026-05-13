@@ -143,7 +143,7 @@ const sendMail = async ({
             subject,
             htmlContent: message,
             cc: [],
-            bcc: ["prashant@dreamweaversindia.com", "ajaykumar@dreamweaversindia.com"]
+            bcc: ["prashant@dreamweaversindia.com", "sandeep.soni@dreamweaversgroup.com"]
         });
 
         await EmailTemplateLog.create({
