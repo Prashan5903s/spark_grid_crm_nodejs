@@ -1,103 +1,112 @@
 // All imports
 const cron = require('node-cron')
-const express = require('express');
-const mongoose = require('mongoose');
-const flash = require('connect-flash');
-const authRoute = require('./route/auth');
-const adminRoute = require('./route/admin');
-const AppConfig = require("./model/AppConfig")
-const Notification = require("./model/Notifications")
-const companyRouter = require('./route/company');
-const userRouter = require('./route/user');
-const scheduleNotificationCommand = require("./command/ScheduleNotification")
+const express = require('express')
+const mongoose = require('mongoose')
+const flash = require('connect-flash')
+const authRoute = require('./route/auth')
+const adminRoute = require('./route/admin')
+const AppConfig = require('./model/AppConfig')
+const Notification = require('./model/Notifications')
+const companyRouter = require('./route/company')
+const userRouter = require('./route/user')
+const scheduleNotificationCommand = require('./command/ScheduleNotification')
 
-const sendEmail = require('./util/cronTemplateReplace');
+const sendEmail = require('./util/cronTemplateReplace')
 
-const path = require('path');
-const fs = require('fs');
-const cors = require('cors');
+const path = require('path')
+const fs = require('fs')
+const cors = require('cors')
 
-require('dotenv').config();
+require('dotenv').config()
 
-const app = express();
+const dns = require('dns')
 
-const MongoURL = process.env.MONGODB_URL;
-const port = process.env.PORT || 4000;
+dns.setServers(['0.0.0.0','8.8.8.8', '1.1.1.1'])
+
+const app = express()
+
+const MongoURL = process.env.MONGODB_URL
+const port = process.env.PORT || 4000
 
 // Define public directory
-const publicDir = path.join(__dirname, 'public');
-const imageDir = path.join(publicDir, 'company_logo');
+const publicDir = path.join(__dirname, 'public')
+const imageDir = path.join(publicDir, 'company_logo')
 
 // Ensure /public/company_logo folder exists
 if (!fs.existsSync(imageDir)) {
-
-    fs.mkdirSync(imageDir, {
-        recursive: true
-    });
+  fs.mkdirSync(imageDir, {
+    recursive: true
+  })
 }
 
-app.use(cors({
-    origin: "*",
+app.use(
+  cors({
+    origin: '*',
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
-}));
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  })
+)
 
-app.use(express.json({
-    limit: "1000mb"
-}));
-app.use(express.urlencoded({
+app.use(
+  express.json({
+    limit: '1000mb'
+  })
+)
+app.use(
+  express.urlencoded({
     extended: true,
-    limit: "1000mb"
-}));
+    limit: '1000mb'
+  })
+)
 
-app.use(flash());
+app.use(flash())
 
-app.use('/public', express.static(publicDir));
+app.use('/public', express.static(publicDir))
 
 // Routes
-app.use('/api/auth', authRoute);
-app.use('/api/admin', adminRoute);
-app.use('/api/company', companyRouter);
-app.use('/api/user', userRouter);
+app.use('/api/auth', authRoute)
+app.use('/api/admin', adminRoute)
+app.use('/api/company', companyRouter)
+app.use('/api/user', userRouter)
 
 // Test route
 app.get('/ping', (req, res) => {
-    res.send("pong");
-});
+  res.send('pong')
+})
 
 // Error handler
 app.use((error, req, res, next) => {
-    res.status(error.statusCode || 500).json({
-        status: 'Failure',
-        statusCode: error.statusCode || 500,
-        message: error.message || 'Internal Server Error'
-    });
-});
+  res.status(error.statusCode || 500).json({
+    status: 'Failure',
+    statusCode: error.statusCode || 500,
+    message: error.message || 'Internal Server Error'
+  })
+})
 
 cron.schedule(
-    "30 10-18 * * 1-6",
-    async () => {
-        console.log("Running email cron...");
+  '30 10-18 * * 1-6',
+  async () => {
+    console.log('Running email cron...')
 
-        try {
-            await sendEmail();
-            console.log("Email cron completed successfully");
-        } catch (error) {
-            console.error("Email cron failed:", error);
-        }
-    }, {
-        timezone: "Asia/Kolkata"
+    try {
+      await sendEmail()
+      console.log('Email cron completed successfully')
+    } catch (error) {
+      console.error('Email cron failed:', error)
     }
-);
+  },
+  {
+    timezone: 'Asia/Kolkata'
+  }
+)
 
 // Start server
-mongoose.connect(MongoURL)
-    .then(() => {
-
-        app.listen(port, () => console.log(`Server started on ${port}`));
-
-    })
-    .catch(err => {
-        console.error("MongoDB connection error:", err);
-    });
+mongoose
+  .connect(MongoURL)
+  .then(() => {
+    app.listen(port, () => console.log(`Server started on ${port}`))
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err)
+  })
