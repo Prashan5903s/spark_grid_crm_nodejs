@@ -15,6 +15,7 @@
     "bullmq": "^5.69.1",
     "connect-flash": "^0.1.1",
     "cors": "^2.8.5",
+    "dns": "^0.2.2",
     "docx2pdf-converter": "^2.1.1",
     "dotenv": "^16.5.0",
     "exceljs": "^4.4.0",
